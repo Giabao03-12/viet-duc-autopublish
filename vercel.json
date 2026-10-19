@@ -1,0 +1,8 @@
+{
+  "crons": [
+    { "path": "/api/cron/prepare?slot=0600", "schedule": "0 20 * * *" },
+    { "path": "/api/cron/prepare?slot=1800", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/watchdog", "schedule": "30 23 * * *" },
+    { "path": "/api/cron/watchdog", "schedule": "30 11 * * *" }
+  ]
+}
