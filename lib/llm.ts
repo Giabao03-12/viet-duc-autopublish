@@ -58,12 +58,12 @@ function userPrompt(ctx: DraftContext) {
 function extractJson<T>(text: string): T {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start < 0 || end < start) throw new Error("Phản hồi AI không có JSON");
+  if (start < 0 || end < start) throw new Error(`Phản hồi AI không có JSON. Đầu phản hồi: "${text.trim().slice(0, 160).replace(/\s+/g, " ")}"`);
   return JSON.parse(text.slice(start, end + 1)) as T;
 }
 
 let client: Anthropic | null = null;
-async function ask(system: string, user: string, maxTokens = 2000): Promise<string> {
+async function ask(system: string, user: string, maxTokens = 4000): Promise<string> {
   if (!env("ANTHROPIC_API_KEY")) throw new Error("Thiếu ANTHROPIC_API_KEY");
   client ??= new Anthropic({ apiKey: env("ANTHROPIC_API_KEY") });
   const res = await client.messages.create({
@@ -72,7 +72,9 @@ async function ask(system: string, user: string, maxTokens = 2000): Promise<stri
     system,
     messages: [{ role: "user", content: user }],
   });
-  return res.content.map((c) => (c.type === "text" ? c.text : "")).join("");
+  const text = res.content.map((c) => (c.type === "text" ? c.text : "")).join("");
+  if (!text.trim()) throw new Error(`AI trả về rỗng (stop_reason=${res.stop_reason}, loại khối=${res.content.map((c) => c.type).join(",") || "không có"}, model=${res.model})`);
+  return text;
 }
 
 function sanitize(d: Draft): Draft {
