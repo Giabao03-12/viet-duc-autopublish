@@ -78,7 +78,8 @@ export default function Home() {
           <button style={btnGhost} disabled={!!busy} onClick={() => run("pre", async () => setPre(await api("/api/admin/preflight", {})))}>1. Kiểm tra kết nối &amp; cấu hình</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d0600", async () => setDraft((await api("/api/admin/dry-run", { slot: "0600" })).post))}>2a. Tạo thử bài 06:00</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d1800", async () => setDraft((await api("/api/admin/dry-run", { slot: "1800" })).post))}>2b. Tạo thử bài 18:00</button>
-          <button style={btnGhost} disabled={!!busy} onClick={() => run("notify", async () => { await api("/api/admin/notify-test", {}); alert("Đã gửi tin thử. Kiểm tra Telegram của bạn."); })}>Gửi thử thông báo</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("notify", async () => { const r = await api("/api/admin/notify-test", {}); alert(r.detail.join("
+")); })}>Gửi thử thông báo</button>
         </div>
         {busy && <p>Đang chạy: {busy}…</p>}
         {pre && (
