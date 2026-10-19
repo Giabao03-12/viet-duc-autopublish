@@ -63,7 +63,7 @@ function extractJson<T>(text: string): T {
 }
 
 let client: Anthropic | null = null;
-async function ask(system: string, user: string, maxTokens = 4000): Promise<string> {
+async function ask(system: string, user: string, maxTokens = 12000): Promise<string> {
   if (!env("ANTHROPIC_API_KEY")) throw new Error("Thiếu ANTHROPIC_API_KEY");
   client ??= new Anthropic({ apiKey: env("ANTHROPIC_API_KEY") });
   const res = await client.messages.create({
