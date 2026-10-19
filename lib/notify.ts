@@ -1,4 +1,4 @@
-import { env } from "./config";
+import { env, telegramChat, telegramToken } from "./config";
 import { getStore } from "./store";
 import { log } from "./log";
 
@@ -23,7 +23,7 @@ export async function notify(level: "info" | "warn" | "error", subject: string, 
       if (r.ok) sent++;
     } catch (e) { console.error("webhook notify failed", e); }
   }
-  const tg = env("TELEGRAM_BOT_TOKEN"), chat = env("TELEGRAM_CHAT_ID");
+  const tg = telegramToken(), chat = telegramChat();
   if (tg && chat) {
     try {
       const r = await fetch(`https://api.telegram.org/bot${tg}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: chat, text: `${title}\n\n${text}`.slice(0, 4000) }) });

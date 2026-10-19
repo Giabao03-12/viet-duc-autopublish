@@ -55,3 +55,14 @@ export function nextSlotInstant(now: Date, slot: SlotId): { date: string; at: Da
   }
   return { date: today, at };
 }
+
+/** Tìm đúng chuỗi token Telegram (số:chữ) trong giá trị đã dán, bỏ mọi ký tự thừa. */
+export function telegramToken(): string {
+  const m = env("TELEGRAM_BOT_TOKEN").match(/\d{6,}:[A-Za-z0-9_-]{30,}/);
+  return m ? m[0] : "";
+}
+/** Chat ID: chỉ lấy phần số (có thể có dấu trừ). */
+export function telegramChat(): string {
+  const m = env("TELEGRAM_CHAT_ID").match(/-?\d{5,}/);
+  return m ? m[0] : "";
+}

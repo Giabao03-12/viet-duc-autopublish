@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
-import { env } from "@/lib/config";
+import { env, telegramChat, telegramToken } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const d = requireAdmin(req); if (d) return d;
   const out: string[] = [];
-  const tg = env("TELEGRAM_BOT_TOKEN"), chat = env("TELEGRAM_CHAT_ID"), hook = env("NOTIFY_WEBHOOK_URL");
-  out.push(`TELEGRAM_BOT_TOKEN: ${tg ? `có (${tg.length} ký tự, ${/^\d+:[\w-]+$/.test(tg) ? "đúng dạng" : "SAI DẠNG – phải là số:chữ, không dấu cách"})` : "TRỐNG/chưa có"}`);
+  const rawTg = env("TELEGRAM_BOT_TOKEN"), tg = telegramToken(), chat = telegramChat(), hook = env("NOTIFY_WEBHOOK_URL");
+  out.push(`TELEGRAM_BOT_TOKEN: ${!rawTg ? "TRỐNG/chưa có" : tg ? `đã đọc được token (giá trị dán dài ${rawTg.length} ký tự${rawTg.length !== tg.length ? ", có ký tự thừa đã tự bỏ" : ""}; token đúng dài ${tg.length}, bắt đầu bằng ${tg.split(":")[0]})` : `KHÔNG tìm thấy token dạng số:chữ trong giá trị đã dán (dài ${rawTg.length} ký tự)`}`);
   out.push(`TELEGRAM_CHAT_ID: ${chat ? `có (${chat})` : "TRỐNG/chưa có"}`);
   if (tg && chat) {
     try {
