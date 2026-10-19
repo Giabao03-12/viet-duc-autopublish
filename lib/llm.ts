@@ -106,7 +106,7 @@ export async function reviewDraft(ctx: DraftContext, title: string, body: string
   const facts = ctx.product
     ? `Hồ sơ: sản phẩm ${ctx.product.name}. Claim được phép: ${ctx.claims.map((c) => `"${c.text}"`).join("; ") || "(không có – không được nêu công dụng)"}.`
     : "Bài giáo dục: không được nhắc sản phẩm, không nêu công dụng sản phẩm.";
-  const out = extractJson<{ pass: boolean; issues: string[] }>(await ask(sys, `${facts}\n\nTiêu đề: ${title}\n\nThân bài:\n${body}`, 800));
+  const out = extractJson<{ pass: boolean; issues: string[] }>(await ask(sys, `${facts}\n\nTiêu đề: ${title}\n\nThân bài:\n${body}`, 10000));
   return { pass: !!out.pass, issues: (out.issues ?? []).map(String) };
 }
 
