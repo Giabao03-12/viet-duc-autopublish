@@ -26,7 +26,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const isProduct = post.kind === "product" && !!product;
 
   let photo: string | null = null;
-  if (isProduct) photo = await dataUri(A("products", product!.image.replace(".png", "-web.png")));
+  const ownerShot = isProduct && !!product!.ownerPhoto && portraitConfirmed();
+  if (ownerShot) photo = await dataUri(A("portraits", product!.ownerPhoto!));
+  else if (isProduct) photo = await dataUri(A("products", product!.image.replace(".png", "-web.png")));
   // Ảnh chân dung do chính Việt Đức gửi và xác nhận (20/10/2026); chỉ cắt khung + thu nhỏ, không chỉnh mặt.
   else if (portraitConfirmed()) photo = await dataUri(A("portraits", "viet-duc-confirmed.jpg"));
 
@@ -49,7 +51,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         <div style={{ display: "flex", flexGrow: 1, alignItems: "center", justifyContent: isProduct ? "center" : "space-between", padding: "20px 70px" }}>
           {photo && isProduct ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photo} alt="" style={{ height: 640, objectFit: "contain" }} />
+            <img src={photo} alt="" style={ownerShot ? { height: 680, width: 680, objectFit: "cover", borderRadius: 24, border: "8px solid #F2F2F2" } : { height: 640, objectFit: "contain" }} />
           ) : photo ? (
             <div style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", width: 380, fontSize: 38, lineHeight: 1.35, color: "#111111", background: "rgba(255,255,255,0.6)", borderLeft: "12px solid #C8102E", padding: "28px 30px" }}>{hook || post.topicLabel}</div>

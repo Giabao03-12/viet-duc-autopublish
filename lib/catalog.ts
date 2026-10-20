@@ -13,6 +13,7 @@ export interface Product {
   nameAliases: string[]; // cách gọi khác được chấp nhận khi kiểm tra
   ingredientCues: string[]; // từ khoá thành phần – câu nhắc tới các từ này coi như đang nói về sản phẩm
   image: string; // ảnh thật, trong /assets/products, KHÔNG chỉnh sửa
+  ownerPhoto?: string; // ảnh thật Việt Đức cầm sản phẩm (assets/portraits), do chủ page gửi & xác nhận
   xnqc: string; // số Giấy xác nhận nội dung quảng cáo
   mandatoryLines: string[]; // câu cảnh báo bắt buộc, do CODE gắn vào cuối bài
   audienceHint: string;
@@ -25,6 +26,7 @@ export const PRODUCTS: Product[] = [
     nameAliases: ["nano premium shark cartilage", "nano shark cartilage", "nano sun ca map"],
     ingredientCues: ["glucosamin", "sụn cá mập", "chiết xuất sụn"],
     image: "sun.png",
+    ownerPhoto: "viet-duc-nano.jpg", // chủ page gửi "Đây hình thật tôi" (20/10/2026)
     xnqc: "2016/2022/XNQC-ATTP",
     mandatoryLines: [
       "Thực phẩm này không phải là thuốc, không có tác dụng thay thế thuốc chữa bệnh.",
