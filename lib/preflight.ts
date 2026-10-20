@@ -39,7 +39,7 @@ export async function runPreflight(): Promise<{ ok: boolean; checks: Check[] }> 
   add("notify", "Kênh thông báo", hasNotify, hasNotify ? "Đã cấu hình" : "Chưa có webhook/Telegram – sẽ không nhận được cảnh báo");
   const claims = approvedClaims();
   add("claims", "Claim đã duyệt (APPROVED_CLAIMS)", claims.length > 0, claims.length ? claims.map((c) => c.id).join(", ") : "Chưa duyệt claim nào – bài 18:00 chỉ dùng chủ đề không nêu công dụng", false);
-  add("portrait", "Ảnh chân dung đã xác nhận", portraitConfirmed(), portraitConfirmed() ? "Dùng ảnh thật viet-duc-01" : "Chưa xác nhận (PORTRAIT_CONFIRMED=1) – bài giáo dục tạm không có ảnh người", false);
+  add("portrait", "Ảnh chân dung đã xác nhận", portraitConfirmed(), portraitConfirmed() ? "Dùng ảnh chân dung Việt Đức đã xác nhận (viet-duc-confirmed.jpg)" : "Đang tắt (PORTRAIT_CONFIRMED=0) – bài giáo dục không có ảnh người", false);
 
   const ok = checks.filter((c) => c.blocking).every((c) => c.ok);
   const st = await getSettings();

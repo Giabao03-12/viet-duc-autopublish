@@ -22,7 +22,7 @@ Chặn: cam kết/chữa khỏi, thay/ngưng thuốc, điều trị/chẩn đoá
 
 ## Việc BẠN phải quyết định (hệ thống không tự làm)
 1. **Duyệt claim**: đặt `APPROVED_CLAIMS=NANO-01,RICH-01,RICH-02,RICH-03` (chỉ những dòng bạn đồng ý). Chưa đặt → bài 18:00 chỉ dùng chủ đề không nêu công dụng.
-2. **Ảnh chân dung**: xác nhận `assets/portraits/viet-duc-01.png` đúng là bạn → `PORTRAIT_CONFIRMED=1`. Chưa → bài 06:00 không có ảnh người.
+2. **Ảnh chân dung**: `assets/portraits/viet-duc-confirmed.jpg` do Việt Đức tự gửi và xác nhận (20/10/2026), chỉ cắt khung, không chỉnh mặt. Muốn tắt ảnh người: `PORTRAIT_CONFIRMED=0`.
 3. **Trùng lịch cũ**: task Claude Code `viet-duc-content-post-scheduler` (06:00/18:00) đang bật và đăng cùng Page cùng giờ. Hãy tắt nó khi bật hệ thống này (và cân nhắc lịch video 07:00/19:00 – hiện sẽ thành 4 bài/ngày).
 
 ## Cài đặt từng bước

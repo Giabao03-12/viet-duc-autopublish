@@ -62,8 +62,11 @@ export function approvedClaims(): Claim[] {
   return CLAIMS.filter((c) => ids.includes(c.id));
 }
 
-/** Ảnh chân dung chỉ được dùng sau khi chủ page xác nhận đúng người (PORTRAIT_CONFIRMED=1). */
-export const portraitConfirmed = () => env("PORTRAIT_CONFIRMED") === "1";
+/**
+ * Ảnh chân dung: assets/portraits/viet-duc-confirmed.jpg do chính Việt Đức gửi và xác nhận "Ảnh mặt tôi đây" (20/10/2026).
+ * Mặc định BẬT; đặt PORTRAIT_CONFIRMED=0 để tắt ảnh người.
+ */
+export const portraitConfirmed = () => env("PORTRAIT_CONFIRMED") !== "0";
 
 export const productById = (id: string) => PRODUCTS.find((p) => p.id === id);
 

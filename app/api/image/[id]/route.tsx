@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const A = (...p: string[]) => path.join(process.cwd(), "assets", ...p);
-const dataUri = async (file: string) => `data:image/png;base64,${(await fs.readFile(file)).toString("base64")}`;
+const dataUri = async (file: string) => `data:image/${/\.jpe?g$/i.test(file) ? "jpeg" : "png"};base64,${(await fs.readFile(file)).toString("base64")}`;
 
 /**
  * Ảnh bài đăng 1080×1350, theo bộ nhận diện Việt Đức – Sống Khỏe (vàng / đỏ / đen).
@@ -27,7 +27,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   let photo: string | null = null;
   if (isProduct) photo = await dataUri(A("products", product!.image.replace(".png", "-web.png")));
-  else if (portraitConfirmed()) photo = await dataUri(A("portraits", "viet-duc-01-web.png"));
+  // Ảnh chân dung do chính Việt Đức gửi và xác nhận (20/10/2026); chỉ cắt khung + thu nhỏ, không chỉnh mặt.
+  else if (portraitConfirmed()) photo = await dataUri(A("portraits", "viet-duc-confirmed.jpg"));
 
   const title = post.title;
   const fontSize = title.length > 60 ? 62 : title.length > 40 ? 72 : 84;
@@ -45,10 +46,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
           <div style={{ display: "flex", fontSize, lineHeight: 1.18, fontWeight: 700, color: isProduct ? "#111111" : "#111111" }}>{title}</div>
           <div style={{ display: "flex", width: 180, height: 12, background: "#C8102E", marginTop: 34 }} />
         </div>
-        <div style={{ display: "flex", flexGrow: 1, alignItems: "center", justifyContent: isProduct ? "center" : "flex-end", padding: "20px 70px" }}>
-          {photo ? (
+        <div style={{ display: "flex", flexGrow: 1, alignItems: "center", justifyContent: isProduct ? "center" : "space-between", padding: "20px 70px" }}>
+          {photo && isProduct ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={photo} alt="" style={{ height: isProduct ? 640 : 700, objectFit: "contain" }} />
+            <img src={photo} alt="" style={{ height: 640, objectFit: "contain" }} />
+          ) : photo ? (
+            <div style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", width: 380, fontSize: 38, lineHeight: 1.35, color: "#111111", background: "rgba(255,255,255,0.6)", borderLeft: "12px solid #C8102E", padding: "28px 30px" }}>{hook || post.topicLabel}</div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo} alt="" style={{ height: 640, width: 549, objectFit: "cover", borderRadius: 24, border: "8px solid #FFFFFF" }} />
+            </div>
           ) : (
             <div style={{ display: "flex", fontSize: 44, lineHeight: 1.35, color: "#111111", background: "rgba(255,255,255,0.55)", borderLeft: "14px solid #C8102E", padding: "34px 40px", width: "100%" }}>{hook || post.topicLabel}</div>
           )}
