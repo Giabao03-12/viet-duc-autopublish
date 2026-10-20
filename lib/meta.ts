@@ -74,19 +74,50 @@ export async function publishPhotoNow(opts: { imageUrl: string; message: string 
   return { fbPostId: j.post_id ?? j.id, photoId: j.id };
 }
 
-export interface RemotePost { published: boolean; permalink?: string; scheduledFor?: number; exists: boolean }
+export interface RemotePost { published: boolean; permalink?: string; scheduledFor?: number; exists: boolean; postId?: string; unknown?: boolean }
 
-export async function getRemotePost(id: string): Promise<RemotePost> {
-  if (isMockMeta()) return { exists: true, published: true, permalink: `https://facebook.com/${id}` };
+const fullLink = (l?: string) => (l ? (l.startsWith("http") ? l : `https://www.facebook.com${l}`) : undefined);
+const norm = (s: string) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * Xác định bài đã đăng chưa. Lưu ý: bài ẢNH hẹn giờ trả về MÃ ẢNH (không phải mã bài), nên phải thử nhiều cách:
+ * 1) hỏi trực tiếp như một bài viết; 2) hỏi như một ảnh -> lấy page_story_id; 3) dò danh sách bài đã đăng của Page theo tiêu đề + giờ.
+ * Chỉ trả `exists:false` khi đã dò cả bài đã đăng lẫn bài đang hẹn mà không thấy. Lỗi không xác định -> `unknown:true` (không được coi là thất bại).
+ */
+export async function findRemotePost(id: string, hint: { title: string; publishAt: string }): Promise<RemotePost> {
+  if (isMockMeta()) return { exists: true, published: true, permalink: `https://facebook.com/${id}`, postId: id };
+  // 1) như một bài viết (id dạng pageId_postId)
   try {
     const j = await graph<{ is_published?: boolean; permalink_url?: string; scheduled_publish_time?: number | string }>("GET", `/${id}`, { fields: "is_published,permalink_url,scheduled_publish_time" });
-    const link = j.permalink_url;
-    const permalink = link ? (link.startsWith("http") ? link : `https://www.facebook.com${link}`) : undefined;
-    return { exists: true, published: j.is_published !== false, permalink, scheduledFor: j.scheduled_publish_time ? Number(j.scheduled_publish_time) : undefined };
+    return { exists: true, published: j.is_published !== false, permalink: fullLink(j.permalink_url), scheduledFor: j.scheduled_publish_time ? Number(j.scheduled_publish_time) : undefined, postId: id };
+  } catch { /* có thể là mã ảnh -> thử tiếp */ }
+  // 2) như một ảnh
+  try {
+    const p = await graph<{ page_story_id?: string; link?: string }>("GET", `/${id}`, { fields: "page_story_id,link" });
+    if (p.page_story_id) {
+      try {
+        const j = await graph<{ is_published?: boolean; permalink_url?: string }>("GET", `/${p.page_story_id}`, { fields: "is_published,permalink_url" });
+        if (j.is_published !== false) return { exists: true, published: true, permalink: fullLink(j.permalink_url) ?? p.link, postId: p.page_story_id };
+      } catch { /* dò tiếp */ }
+    }
+  } catch { /* dò tiếp */ }
+  // 3) dò bài đã đăng của Page theo tiêu đề, trong khoảng giờ đăng
+  const due = Date.parse(hint.publishAt);
+  const t = norm(hint.title).slice(0, 40);
+  try {
+    const list = await graph<{ data: { id: string; message?: string; created_time?: string; permalink_url?: string }[] }>("GET", `/${pageId()}/published_posts`, { fields: "id,message,created_time,permalink_url", limit: 30 });
+    const hit = list.data.find((x) => x.message && norm(x.message).includes(t) && (!x.created_time || Math.abs(Date.parse(x.created_time) - due) < 3 * 3600000));
+    if (hit) return { exists: true, published: true, permalink: fullLink(hit.permalink_url), postId: hit.id };
   } catch (e) {
-    if (e instanceof MetaError && (e.code === 100 || e.code === 803)) return { exists: false, published: false };
-    throw e;
+    if (e instanceof MetaError && e.isTokenError) throw e;
+    return { exists: true, published: false, unknown: true };
   }
+  // 4) còn trong danh sách đang hẹn giờ?
+  try {
+    const sch = await graph<{ data: { id: string; message?: string }[] }>("GET", `/${pageId()}/scheduled_posts`, { fields: "id,message", limit: 30 });
+    if (sch.data.some((x) => x.message && norm(x.message).includes(t))) return { exists: true, published: false };
+  } catch { return { exists: true, published: false, unknown: true }; }
+  return { exists: false, published: false };
 }
 
 export async function deleteRemote(id: string): Promise<void> {

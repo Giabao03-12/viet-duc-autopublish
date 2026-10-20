@@ -144,6 +144,22 @@ async function main() {
   }
   t("Chưa duyệt claim -> chỉ chọn chủ đề không nêu công dụng", allNoClaim);
 
+  // ── Watchdog: đối soát + tự sửa báo nhầm "thất bại" ──
+  {
+    const { savePost: sp, getPost: gp, watchdog: wd } = await import("../lib/pipeline");
+    const mk = (id: string, status: "scheduled" | "failed") => ({
+      id, slot: "0600" as const, kind: "education" as const, date: "2026-10-21", publishAt: "2026-10-20T23:00:00.000Z", status, dryRun: false,
+      topicId: "x", topicLabel: "x", titles: ["a", "b", "c"], title: "Giữ cân nặng hợp lý", caption: "c", hashtags: [], claimIds: [],
+      imageKind: "education" as const, attempts: 1, complianceLog: [], fbPostId: "122127106575466365", error: status === "failed" ? "Bài hẹn giờ không còn trên Facebook" : undefined,
+      createdAt: "", updatedAt: "",
+    });
+    await sp(mk("wd-sched", "scheduled"));
+    await sp(mk("wd-failed", "failed"));
+    await wd(new Date("2026-10-21T00:00:00Z")); // 07:00 VN
+    t("Watchdog: bài quá giờ -> posted", (await gp("wd-sched"))?.status === "posted");
+    t("Watchdog: bài 'thất bại' nhầm trong 24h -> tự sửa thành posted", (await gp("wd-failed"))?.status === "posted" && !(await gp("wd-failed"))?.error);
+  }
+
   console.log(`\n${pass} PASS / ${failN} FAIL`);
   process.exit(failN ? 1 : 0);
 }

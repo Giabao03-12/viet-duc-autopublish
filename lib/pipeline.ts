@@ -289,16 +289,22 @@ export async function watchdog(at: Date = new Date()) {
   // 2) Đối soát bài đã hẹn
   const posts = await listPosts(40);
   for (const p of posts) {
-    if (p.status !== "scheduled" || !p.fbPostId) continue;
+    if (!p.fbPostId) continue;
     const due = new Date(p.publishAt).getTime();
+    // Bài đang hẹn đã quá giờ, HOẶC bài bị đánh "thất bại" trong 24h qua (có thể do báo nhầm trước đây) -> đối soát lại
+    const recheckFailed = p.status === "failed" && at.getTime() - due < 24 * 3600000;
+    if (p.status !== "scheduled" && !recheckFailed) continue;
     if (due > at.getTime()) continue;
     try {
-      const r = await meta.getRemotePost(p.fbPostId);
+      const r = await meta.findRemotePost(p.fbPostId, { title: p.title, publishAt: p.publishAt });
       if (r.exists && r.published) {
-        p.status = "posted"; p.fbPermalink = r.permalink; await savePost(p);
+        const wasFailed = p.status === "failed";
+        p.status = "posted"; p.fbPermalink = r.permalink; p.error = undefined; if (r.postId) p.fbPostId = r.postId; await savePost(p);
         report.push(`Đã đăng ${p.slot} ${p.date}`);
-        await log("info", "watchdog", `Xác nhận đã đăng ${p.fbPostId}`);
-        await notify("info", `Đã đăng ${SLOTS[p.slot].label} ${p.date}`, `${p.title}\nPost ID: ${p.fbPostId}${r.permalink ? "\n" + r.permalink : ""}`);
+        await log("info", "watchdog", `Xác nhận đã đăng ${p.fbPostId}${wasFailed ? " (sửa báo nhầm thất bại)" : ""}`);
+        await notify("info", `Đã đăng ${SLOTS[p.slot].label} ${p.date}${wasFailed ? " (cảnh báo thất bại trước đó là báo nhầm)" : ""}`, `${p.title}\nPost ID: ${p.fbPostId}${r.permalink ? "\n" + r.permalink : ""}`);
+      } else if (recheckFailed || r.unknown) {
+        continue; // không chắc chắn -> không báo thêm lỗi, đợi lượt sau
       } else if (at.getTime() - due > 20 * 60000) {
         p.status = "failed"; p.error = r.exists ? "Quá giờ 20 phút mà Facebook chưa đăng" : "Bài hẹn giờ không còn trên Facebook"; await savePost(p);
         report.push(`THẤT BẠI ${p.slot} ${p.date}`);
