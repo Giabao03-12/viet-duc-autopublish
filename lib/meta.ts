@@ -1,4 +1,11 @@
-import { env, isMockMeta } from "./config";
+import { AsyncLocalStorage } from "async_hooks";
+import { CHANNELS, env, isMockMeta, type ChannelId } from "./config";
+
+/** Kênh (Fanpage) hiện hành cho mọi lệnh gọi Graph API trong `inChannel(...)`. Mặc định: Khoẻ Trẻ Đẹp. */
+const channelCtx = new AsyncLocalStorage<ChannelId>();
+export const inChannel = <T>(ch: ChannelId | undefined, fn: () => Promise<T>) => channelCtx.run(ch ?? "ktd", fn);
+export const currentChannel = (): ChannelId => channelCtx.getStore() ?? "ktd";
+const pageToken = () => env(CHANNELS[currentChannel()].tokenEnv);
 
 /** Meta Graph API chính thức. Không dùng trình duyệt/scraping. */
 const V = () => env("META_GRAPH_VERSION") || "v22.0";
@@ -12,8 +19,8 @@ export class MetaError extends Error {
 }
 
 async function graph<T>(method: "GET" | "POST" | "DELETE", path: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
-  const token = env("META_PAGE_ACCESS_TOKEN");
-  if (!token) throw new MetaError(undefined, undefined, "Thiếu META_PAGE_ACCESS_TOKEN");
+  const token = pageToken();
+  if (!token) throw new MetaError(undefined, undefined, `Thiếu ${CHANNELS[currentChannel()].tokenEnv}`);
   const body = new URLSearchParams();
   for (const [k, v] of Object.entries({ ...params, access_token: token })) body.set(k, String(v));
   const url = method === "POST" ? `${base()}${path}` : `${base()}${path}?${body}`;
@@ -23,12 +30,12 @@ async function graph<T>(method: "GET" | "POST" | "DELETE", path: string, params:
   return j;
 }
 
-export const pageId = () => env("META_PAGE_ID");
+export const pageId = () => env(CHANNELS[currentChannel()].pageIdEnv);
 
 export interface PageInfo { id: string; name: string; link?: string }
 
 export async function getPage(): Promise<PageInfo> {
-  if (isMockMeta()) return { id: pageId() || "MOCK", name: "Việt Đức - Khoẻ Trẻ Đẹp (giả lập)" };
+  if (isMockMeta()) return { id: pageId() || "MOCK", name: `${CHANNELS[currentChannel()].name} (giả lập)` };
   return graph<PageInfo>("GET", `/${pageId()}`, { fields: "id,name,link" });
 }
 
@@ -36,7 +43,7 @@ export interface TokenHealth { valid: boolean; expiresAt: number | null; neverEx
 
 export async function tokenHealth(): Promise<TokenHealth> {
   if (isMockMeta()) return { valid: true, expiresAt: null, neverExpires: true, scopes: ["pages_manage_posts"], daysLeft: null, note: "giả lập" };
-  const token = env("META_PAGE_ACCESS_TOKEN");
+  const token = pageToken();
   const appId = env("META_APP_ID"), secret = env("META_APP_SECRET");
   if (!token) return { valid: false, expiresAt: null, neverExpires: false, scopes: [], daysLeft: null, note: "Thiếu token" };
   if (!appId || !secret) {

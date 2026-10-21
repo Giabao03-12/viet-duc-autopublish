@@ -1,8 +1,36 @@
 {
   "crons": [
-    { "path": "/api/cron/prepare?slot=0600", "schedule": "0 20 * * *" },
-    { "path": "/api/cron/prepare?slot=1800", "schedule": "0 8 * * *" },
-    { "path": "/api/cron/watchdog", "schedule": "30 23 * * *" },
-    { "path": "/api/cron/watchdog", "schedule": "30 11 * * *" }
+    {
+      "path": "/api/cron/prepare?slot=0600",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/cron/prepare?slot=0700",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/prepare?slot=1800",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/prepare?slot=1900",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/watchdog",
+      "schedule": "30 23 * * *"
+    },
+    {
+      "path": "/api/cron/watchdog",
+      "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/cron/watchdog",
+      "schedule": "30 11 * * *"
+    },
+    {
+      "path": "/api/cron/watchdog",
+      "schedule": "30 12 * * *"
+    }
   ]
 }

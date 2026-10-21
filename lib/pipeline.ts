@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { BRAND, MAX_REVISIONS, MIN_LEAD_MIN, SLOTS, env, ictParts, nextSlotInstant } from "./config";
+import { ALL_SLOTS, BRAND, CHANNELS, MAX_REVISIONS, MIN_LEAD_MIN, SLOTS, channelConfigured, env, ictParts, nextSlotInstant, type ChannelId } from "./config";
 import { EDU_TOPICS, PRODUCT_TOPICS, PRODUCTS, approvedClaims, productById, type Product, type Topic } from "./catalog";
 import { buildFooter, checkContent } from "./compliance";
 import { reviewDraft, reviseDraft, writeDraft, type Draft, type DraftContext } from "./llm";
@@ -40,16 +40,16 @@ async function loadMemory(kind: string): Promise<Memory> {
   return (await getStore().get<Memory>(memKey(kind))) ?? { used: [], lastGroup: {}, recentCaptions: [], cycle: 0 };
 }
 
-/** Sản phẩm luân phiên theo ngày: ngày chẵn NANO, ngày lẻ RICH (đổi chiều theo dayIndex). */
-export function pickProduct(date: string): Product {
+/** Sản phẩm luân phiên theo ngày; `offset` lệch theo kênh để 2 Page cùng ngày nói về 2 sản phẩm khác nhau. */
+export function pickProduct(date: string, offset = 0): Product {
   const dayIndex = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
-  return PRODUCTS[dayIndex % PRODUCTS.length];
+  return PRODUCTS[(dayIndex + offset) % PRODUCTS.length];
 }
 
-export async function pickTopic(kind: "education" | "product", date: string, extraExclude: string[] = []): Promise<{ topic: Topic; claimIds: string[]; product?: Product; exhausted: boolean } | null> {
+export async function pickTopic(kind: "education" | "product", date: string, extraExclude: string[] = [], productOffset = 0): Promise<{ topic: Topic; claimIds: string[]; product?: Product; exhausted: boolean } | null> {
   const mem = await loadMemory(kind);
   const approved = approvedClaims().map((c) => c.id);
-  const product = kind === "product" ? pickProduct(date) : undefined;
+  const product = kind === "product" ? pickProduct(date, productOffset) : undefined;
 
   let pool: (Topic & { productId?: string; claimIds?: string[] })[] =
     kind === "education" ? EDU_TOPICS : PRODUCT_TOPICS.filter((t) => t.productId === product!.id);
@@ -64,7 +64,7 @@ export async function pickTopic(kind: "education" | "product", date: string, ext
   const noRepeatGroup = fresh.filter((t) => t.group !== lastGroup);
   const candidates = noRepeatGroup.length ? noRepeatGroup : fresh;
   if (!candidates.length) return null;
-  const topic = candidates[Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000) % candidates.length];
+  const topic = candidates[(Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000) + productOffset * 7) % candidates.length];
   return { topic, claimIds: (topic as { claimIds?: string[] }).claimIds ?? [], product, exhausted };
 }
 
@@ -139,6 +139,12 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     return { status: "disabled", reason: "Chế độ đăng tự động đang tắt" };
   }
 
+  const ch: ChannelId = SLOTS[slot].channel;
+  if (!dryRun && !channelConfigured(ch)) {
+    await log("info", "prepare", `[${slot}] Bỏ qua: chưa cấu hình Page ${CHANNELS[ch].name} (${CHANNELS[ch].pageIdEnv}/${CHANNELS[ch].tokenEnv})`);
+    return { status: "disabled", reason: `Chưa cấu hình Page ${CHANNELS[ch].name}` };
+  }
+
   const { date, at } = nextSlotInstant(at0, slot);
   const kind = SLOTS[slot].kind;
   const leadMin = (at.getTime() - at0.getTime()) / 60000;
@@ -162,7 +168,7 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
   }
 
   const base: Post = {
-    id: postId, slot, kind, date, publishAt: at.toISOString(), status: "draft", dryRun,
+    id: postId, slot, channel: ch, kind, date, publishAt: at.toISOString(), status: "draft", dryRun,
     topicId: "", topicLabel: "", titles: [], title: "", caption: "", hashtags: [], claimIds: [],
     imageKind: kind, attempts: 0, complianceLog: [], createdAt: now(), updatedAt: now(),
   };
@@ -178,7 +184,7 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
   };
 
   try {
-    const pick = await pickTopic(kind, date);
+    const pick = await pickTopic(kind, date, [], CHANNELS[ch].productOffset);
     if (!pick) return fail("skipped", "Không còn chủ đề hợp lệ (có thể do claim chưa được duyệt). Cần bổ sung chủ đề hoặc duyệt claim trong APPROVED_CLAIMS.");
     if (pick.exhausted && !dryRun) await notify("warn", "Kho chủ đề đã dùng hết một vòng", `Nhóm ${kind}: hệ thống quay vòng chủ đề. Hãy bổ sung chủ đề mới trong lib/catalog.ts để tránh lặp lại.`, `exhausted:${kind}`);
 
@@ -223,7 +229,8 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     // Kiểm tra lại trạng thái ngay trước khi hẹn: người dùng có thể vừa TẮT.
     if (!(await getSettings()).autoEnabled) { post.status = "cancelled"; post.error = "Bị tắt trong lúc chuẩn bị"; await savePost(post); return { status: "disabled", post }; }
 
-    const res = await meta.schedulePhoto({ imageUrl: post.imageUrl, message: post.caption, publishAt: at });
+    const imageUrl = post.imageUrl;
+    const res = await meta.inChannel(ch, () => meta.schedulePhoto({ imageUrl, message: post.caption, publishAt: at }));
     post.fbPostId = res.fbPostId;
     post.status = "scheduled";
     post.error = undefined;
@@ -250,7 +257,8 @@ export async function publishTestPost(id: string): Promise<Post> {
   if (!p) throw new Error("Không thấy bài");
   if (p.status !== "draft") throw new Error("Chỉ đăng thử được bản nháp đã đạt kiểm duyệt");
   if (!p.imageUrl) throw new Error("Thiếu PUBLIC_BASE_URL");
-  const res = await meta.publishPhotoNow({ imageUrl: p.imageUrl, message: p.caption });
+  const imageUrl = p.imageUrl;
+  const res = await meta.inChannel(p.channel, () => meta.publishPhotoNow({ imageUrl, message: p.caption }));
   p.fbPostId = res.fbPostId;
   p.status = "posted";
   p.dryRun = false;
@@ -268,7 +276,7 @@ export async function cancelScheduled(): Promise<number> {
   let n = 0;
   for (const p of posts) {
     if (p.status === "scheduled" && new Date(p.publishAt).getTime() > Date.now() && p.fbPostId) {
-      try { await meta.deleteRemote(p.fbPostId); p.status = "cancelled"; await savePost(p); n++; await getStore().del(`slot:${p.date}:${p.slot}`); }
+      try { const fid = p.fbPostId; await meta.inChannel(p.channel, () => meta.deleteRemote(fid)); p.status = "cancelled"; await savePost(p); n++; await getStore().del(`slot:${p.date}:${p.slot}`); }
       catch (e) { await log("error", "cancel", `Không huỷ được ${p.fbPostId}: ${(e as Error).message}`); }
     }
   }
@@ -278,13 +286,17 @@ export async function cancelScheduled(): Promise<number> {
 // ───────────────────────── Watchdog: đối soát, token, cảnh báo ─────────────────────────
 export async function watchdog(at: Date = new Date()) {
   const report: string[] = [];
-  // 1) Token
-  try {
-    const t = await meta.tokenHealth();
-    if (!t.valid) { report.push("Token KHÔNG hợp lệ"); await notify("error", "Token Facebook không hợp lệ", t.note ?? "Hãy tạo lại Page Access Token.", "token-invalid"); }
-    else if (t.daysLeft !== null && t.daysLeft <= 7) { report.push(`Token còn ${t.daysLeft} ngày`); await notify("warn", "Token Facebook sắp hết hạn", `Còn ${t.daysLeft} ngày.`, "token-expiring"); }
-    else report.push(`Token ổn (${t.neverExpires ? "không hết hạn" : t.daysLeft === null ? "không rõ hạn" : t.daysLeft + " ngày"})`);
-  } catch (e) { report.push(`Không kiểm tra được token: ${(e as Error).message}`); }
+  // 1) Token từng Page đã cấu hình
+  for (const ch of Object.keys(CHANNELS) as ChannelId[]) {
+    if (!channelConfigured(ch)) continue;
+    const nm = CHANNELS[ch].name;
+    try {
+      const t = await meta.inChannel(ch, () => meta.tokenHealth());
+      if (!t.valid) { report.push(`Token ${nm} KHÔNG hợp lệ`); await notify("error", `Token Facebook không hợp lệ – ${nm}`, t.note ?? "Hãy tạo lại Page Access Token.", `token-invalid:${ch}`); }
+      else if (t.daysLeft !== null && t.daysLeft <= 7) { report.push(`Token ${nm} còn ${t.daysLeft} ngày`); await notify("warn", `Token Facebook sắp hết hạn – ${nm}`, `Còn ${t.daysLeft} ngày.`, `token-expiring:${ch}`); }
+      else report.push(`Token ${nm} ổn`);
+    } catch (e) { report.push(`Không kiểm tra được token ${nm}: ${(e as Error).message}`); }
+  }
 
   // 2) Đối soát bài đã hẹn
   const posts = await listPosts(40);
@@ -296,7 +308,8 @@ export async function watchdog(at: Date = new Date()) {
     if (p.status !== "scheduled" && !recheckFailed) continue;
     if (due > at.getTime()) continue;
     try {
-      const r = await meta.findRemotePost(p.fbPostId, { title: p.title, publishAt: p.publishAt });
+      const fid = p.fbPostId;
+      const r = await meta.inChannel(p.channel, () => meta.findRemotePost(fid, { title: p.title, publishAt: p.publishAt }));
       if (r.exists && r.published) {
         const wasFailed = p.status === "failed";
         p.status = "posted"; p.fbPermalink = r.permalink; p.error = undefined; if (r.postId) p.fbPostId = r.postId; await savePost(p);
@@ -316,7 +329,8 @@ export async function watchdog(at: Date = new Date()) {
   // 3) Phát hiện hệ thống bỏ lỡ khâu chuẩn bị: khung giờ sắp tới < 3h mà chưa có bài
   const settings = await getSettings();
   if (settings.autoEnabled) {
-    for (const slot of Object.keys(SLOTS) as SlotId[]) {
+    for (const slot of ALL_SLOTS) {
+      if (!channelConfigured(SLOTS[slot].channel)) continue;
       const { date, at: when } = nextSlotInstant(at, slot);
       const hours = (when.getTime() - at.getTime()) / 3600000;
       if (hours < 3 && !(await getStore().get(`slot:${date}:${slot}`))) {

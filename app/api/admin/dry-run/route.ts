@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ALL_SLOTS } from "@/lib/config";
 import { requireAdmin } from "@/lib/admin";
 import { prepareSlot } from "@/lib/pipeline";
 import type { SlotId } from "@/lib/types";
@@ -10,7 +11,7 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const d = requireAdmin(req); if (d) return d;
   const { slot } = (await req.json().catch(() => ({}))) as { slot?: string };
-  if (slot !== "0600" && slot !== "1800") return NextResponse.json({ error: "slot phải là 0600 hoặc 1800" }, { status: 400 });
+  if (!slot || !(ALL_SLOTS as string[]).includes(slot)) return NextResponse.json({ error: `slot phải là một trong: ${ALL_SLOTS.join(", ")}` }, { status: 400 });
   const r = await prepareSlot({ slot: slot as SlotId, dryRun: true });
   return NextResponse.json(r);
 }

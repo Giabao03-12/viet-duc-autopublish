@@ -7,6 +7,7 @@ process.env.MOCK_META = "1";
 process.env.SKIP_IMAGE_CHECK = "1";
 process.env.PUBLIC_BASE_URL = "https://example.test";
 process.env.META_PAGE_ID = "1315954481600103";
+process.env.META_PAGE_ACCESS_TOKEN = "MOCK_TOKEN_KTD";
 process.env.APPROVED_CLAIMS = "NANO-01,RICH-01,RICH-02,RICH-03";
 
 import { useMemoryStore } from "../lib/store";
@@ -128,11 +129,15 @@ async function main() {
   t("pickProduct xen kẽ", pickProduct("2026-10-20").id !== pickProduct("2026-10-21").id);
   t("Không trùng chủ đề liên tiếp", dayAfter.post?.topicId !== res.post?.topicId);
 
-  // ── Tắt tự động -> huỷ bài đã hẹn ──
-  const before = (await listPosts()).filter((p) => p.status === "scheduled").length;
-  const n = await cancelScheduled();
-  const after = (await listPosts()).filter((p) => p.status === "scheduled").length;
-  t("Tắt -> huỷ các bài còn hẹn trong tương lai", before >= 1 && n >= 1 && after < before, `${before} ${n} ${after}`);
+  // ── Tắt tự động -> huỷ bài đã hẹn (dùng bài hẹn trong TƯƠNG LAI, không phụ thuộc ngày chạy test) ──
+  {
+    const { savePost: sp } = await import("../lib/pipeline");
+    const future = new Date(Date.now() + 3 * 86400000).toISOString();
+    await sp({ id: "cancel-me", slot: "1800", channel: "ktd", kind: "product", date: "2099-01-01", publishAt: future, status: "scheduled", dryRun: false, topicId: "x", topicLabel: "x", titles: [], title: "x", caption: "x", hashtags: [], claimIds: [], imageKind: "product", attempts: 1, complianceLog: [], fbPostId: "MOCK_cancel", createdAt: "", updatedAt: "" });
+    const n = await cancelScheduled();
+    const left = (await listPosts(80)).filter((p) => p.status === "scheduled" && new Date(p.publishAt).getTime() > Date.now()).length;
+    t("Tắt -> huỷ các bài còn hẹn trong tương lai", n >= 1 && left === 0, `${n} ${left}`);
+  }
 
   // ── Claim chưa duyệt -> chủ đề cần claim bị loại khỏi kho ──
   process.env.APPROVED_CLAIMS = "";
@@ -143,6 +148,28 @@ async function main() {
     if (!p || p.claimIds.length) allNoClaim = false;
   }
   t("Chưa duyệt claim -> chỉ chọn chủ đề không nêu công dụng", allNoClaim);
+
+  // ── Page thứ hai: Sống Khỏe 07:00 / 19:00 ──
+  {
+    process.env.APPROVED_CLAIMS = "NANO-01,RICH-01,RICH-02,RICH-03";
+    useMemoryStore(); // bộ nhớ sạch: tránh "bài gần đây" giả lập của các test trước làm bộ chống trùng chặn
+    await saveSettings({ ...(await getSettings()), autoEnabled: true });
+    const T2 = new Date("2026-11-10T07:00:00Z"); // 14:00 VN 10/11
+    let r2 = await prepareSlot({ slot: "1900", now: T2 });
+    t("Sống Khỏe chưa cấu hình -> tự bỏ qua, không lỗi", r2.status === "disabled", JSON.stringify(r2).slice(0, 200));
+    process.env.META_PAGE_ID_SK = "999999999";
+    process.env.META_PAGE_ACCESS_TOKEN_SK = "MOCK_TOKEN_SK";
+    process.env.META_PAGE_ACCESS_TOKEN = "MOCK_TOKEN_KTD";
+    const a = await prepareSlot({ slot: "1800", now: T2 });
+    r2 = await prepareSlot({ slot: "1900", now: T2 });
+    t("Sống Khỏe 19:00 hẹn thành công, đúng kênh", r2.status === "scheduled" && r2.post?.channel === "sk" && r2.post.publishAt === "2026-11-10T12:00:00.000Z", JSON.stringify([r2.status, r2.reason]).slice(0, 600));
+    t("Cùng ngày: 2 Page nói về 2 sản phẩm khác nhau", a.status === "scheduled" && a.post?.productId !== r2.post?.productId, `${a.status} ${a.post?.productId} ${r2.post?.productId}`);
+    t("Cùng ngày: 2 Page khác chủ đề", a.post?.topicId !== r2.post?.topicId);
+    const e1 = await prepareSlot({ slot: "0600", now: new Date("2026-11-10T20:00:00Z") });
+    const e2 = await prepareSlot({ slot: "0700", now: new Date("2026-11-10T21:00:00Z") });
+    t("Giáo dục 06:00 và 07:00 khác chủ đề", e1.status === "scheduled" && e2.status === "scheduled" && e1.post?.topicId !== e2.post?.topicId && e2.post?.channel === "sk", `${e1.status} ${e2.status} ${e1.post?.topicId} ${e2.post?.topicId}`);
+    t("Bài 07:00 giờ VN = 00:00 UTC", e2.post?.publishAt === "2026-11-11T00:00:00.000Z", e2.post?.publishAt);
+  }
 
   // ── Watchdog: đối soát + tự sửa báo nhầm "thất bại" ──
   {

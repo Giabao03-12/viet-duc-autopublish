@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ALL_SLOTS } from "@/lib/config";
 import { isCron } from "@/lib/auth";
 import { prepareSlot } from "@/lib/pipeline";
 import { notify } from "@/lib/notify";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   if (!isCron(req)) return new NextResponse("unauthorized", { status: 401 });
   const slot = new URL(req.url).searchParams.get("slot");
-  if (slot !== "0600" && slot !== "1800") return NextResponse.json({ error: "slot phải là 0600 hoặc 1800" }, { status: 400 });
+  if (!slot || !(ALL_SLOTS as string[]).includes(slot)) return NextResponse.json({ error: `slot phải là một trong: ${ALL_SLOTS.join(", ")}` }, { status: 400 });
   try {
     const r = await prepareSlot({ slot: slot as SlotId });
     return NextResponse.json({ status: r.status, reason: r.reason, postId: r.post?.id, fbPostId: r.post?.fbPostId });

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
-import { env } from "@/lib/config";
+import { CHANNELS, channelConfigured, env, type ChannelId } from "@/lib/config";
+import { inChannel } from "@/lib/meta";
 import { listPosts } from "@/lib/pipeline";
 import { tokenHealth } from "@/lib/meta";
 
@@ -8,8 +9,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const V = () => env("META_GRAPH_VERSION") || "v22.0";
+let TOKEN = "";
 async function g(path: string, params: Record<string, string> = {}) {
-  const q = new URLSearchParams({ ...params, access_token: env("META_PAGE_ACCESS_TOKEN") });
+  const q = new URLSearchParams({ ...params, access_token: TOKEN });
   const r = await fetch(`https://graph.facebook.com/${V()}${path}?${q}`, { cache: "no-store" });
   return (await r.json()) as Record<string, unknown> & { error?: { message: string; code: number } };
 }
@@ -24,7 +26,17 @@ const short = (s?: unknown) => String(s ?? "").replace(/\s+/g, " ").slice(0, 60)
 export async function POST(req: Request) {
   const d = requireAdmin(req); if (d) return d;
   const out: string[] = [];
-  const pid = env("META_PAGE_ID");
+  for (const ch of Object.keys(CHANNELS) as ChannelId[]) {
+    if (!channelConfigured(ch)) { out.push(`=== ${CHANNELS[ch].name}: CHƯA CẤU HÌNH ===`); continue; }
+    out.push(`=== ${CHANNELS[ch].name} ===`);
+    await inChannel(ch, () => checkOne(ch, out));
+  }
+  return NextResponse.json({ detail: out });
+}
+
+async function checkOne(ch: ChannelId, out: string[]) {
+  TOKEN = env(CHANNELS[ch].tokenEnv);
+  const pid = env(CHANNELS[ch].pageIdEnv);
   try {
     const t = await tokenHealth();
     out.push(`Token: ${t.valid ? "hợp lệ" : "KHÔNG hợp lệ " + (t.note ?? "")}; quyền: ${t.scopes.join(", ") || "không đọc được"}`);
@@ -49,10 +61,9 @@ export async function POST(req: Request) {
     for (const x of data) out.push(`  • ${vn(x.created_time)} – ${short(x.message)}${x.permalink_url ? " → " + x.permalink_url : ""}`);
   }
 
-  const mine = (await listPosts(10)).filter((p) => !p.dryRun && p.fbPostId).slice(0, 3);
+  const mine = (await listPosts(20)).filter((p) => !p.dryRun && p.fbPostId && (p.channel ?? "ktd") === ch).slice(0, 3);
   for (const p of mine) {
     const r = await g(`/${p.fbPostId}`, { fields: "id" });
     out.push(`Hệ thống ${p.date} ${p.slot} [${p.status}] mã ${p.fbPostId}: ${r.error ? "Facebook báo " + r.error.code + " – " + r.error.message : "còn tồn tại"}`);
   }
-  return NextResponse.json({ detail: out });
 }

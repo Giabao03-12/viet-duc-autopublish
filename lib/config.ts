@@ -3,10 +3,22 @@ import type { SlotId, SlotKind } from "./types";
 export const TZ = "Asia/Ho_Chi_Minh"; // UTC+7, không có giờ mùa hè
 export const TZ_OFFSET_MIN = 7 * 60;
 
-export const SLOTS: Record<SlotId, { hour: number; minute: number; kind: SlotKind; label: string }> = {
-  "0600": { hour: 6, minute: 0, kind: "education", label: "06:00 – Giáo dục sức khỏe" },
-  "1800": { hour: 18, minute: 0, kind: "product", label: "18:00 – Kiến thức sản phẩm / giải đáp" },
+/** Mỗi kênh = 1 Fanpage, có Page ID + token riêng (biến môi trường). */
+export type ChannelId = "ktd" | "sk";
+export const CHANNELS: Record<ChannelId, { name: string; pageIdEnv: string; tokenEnv: string; productOffset: number }> = {
+  ktd: { name: "Việt Đức - Khoẻ Trẻ Đẹp", pageIdEnv: "META_PAGE_ID", tokenEnv: "META_PAGE_ACCESS_TOKEN", productOffset: 0 },
+  // productOffset 1: cùng ngày, Page Sống Khỏe nói về sản phẩm KHÁC với Page Khoẻ Trẻ Đẹp
+  sk: { name: "Việt Đức - Sống Khỏe", pageIdEnv: "META_PAGE_ID_SK", tokenEnv: "META_PAGE_ACCESS_TOKEN_SK", productOffset: 1 },
 };
+export const channelConfigured = (ch: ChannelId) => !!(env(CHANNELS[ch].pageIdEnv) && env(CHANNELS[ch].tokenEnv));
+
+export const SLOTS: Record<SlotId, { hour: number; minute: number; kind: SlotKind; label: string; channel: ChannelId }> = {
+  "0600": { hour: 6, minute: 0, kind: "education", channel: "ktd", label: "06:00 Khoẻ Trẻ Đẹp – Giáo dục sức khỏe" },
+  "1800": { hour: 18, minute: 0, kind: "product", channel: "ktd", label: "18:00 Khoẻ Trẻ Đẹp – Kiến thức sản phẩm / giải đáp" },
+  "0700": { hour: 7, minute: 0, kind: "education", channel: "sk", label: "07:00 Sống Khỏe – Giáo dục sức khỏe" },
+  "1900": { hour: 19, minute: 0, kind: "product", channel: "sk", label: "19:00 Sống Khỏe – Kiến thức sản phẩm / giải đáp" },
+};
+export const ALL_SLOTS = Object.keys(SLOTS) as SlotId[];
 
 export const BRAND = {
   name: "Việt Đức – Sống Khỏe",

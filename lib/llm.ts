@@ -116,10 +116,14 @@ function mockDraft(ctx: DraftContext, fixed = false): Draft {
   const name = ctx.product?.name ?? "";
   const claimSentences = ctx.claims.map((c) => c.text).join("\n");
   const short = t.length > 48 ? t.slice(0, 48).trim() : t;
+  // Bản giả lập: nội dung xoay quanh chủ đề (ít câu khuôn mẫu) để bộ chống trùng không bắt nhầm khi chạy thử.
+  const angle = ctx.topic.angle;
+  const parts = angle.split(/[;,.]\s*/).filter(Boolean);
+  const bullets = parts.map((x, i) => `${i + 1}. ${x.charAt(0).toUpperCase()}${x.slice(1)}.`).join("\n");
   const body =
     ctx.kind === "education"
-      ? `Chủ đề hôm nay: ${t}.\n\n${ctx.topic.angle}\n\nMỗi người một thể trạng khác nhau, nên anh chị hãy lắng nghe cơ thể mình về "${t.toLowerCase()}" và làm từ từ, đều đặn. Nếu có điều gì băn khoăn, hãy trao đổi với bác sĩ của anh chị. Anh chị đang áp dụng điều gì trong chủ đề này? Chia sẻ ở phần bình luận để mọi người cùng tham khảo nhé.`
-      : `Câu hỏi nhiều anh chị gửi về: ${t}.\n\n${ctx.topic.angle}\n\n${claimSentences ? claimSentences + "\n\n" : ""}Với ${name}, anh chị nên đọc kỹ nhãn trên hộp, xem hạn dùng và mục lưu ý trước khi dùng. Anh chị còn thắc mắc gì về "${t.toLowerCase()}"? Để lại bình luận, mình sẽ giải đáp từng câu.`;
+      ? `${t}: mình gửi anh chị vài điều dễ áp dụng.\n\n${bullets}\n\nVề "${t.toLowerCase()}", mỗi người một thể trạng nên anh chị cứ làm từ từ; có băn khoăn thì hỏi bác sĩ. Anh chị đang làm được điều nào ở trên?`
+      : `${t}\n\n${bullets}\n\n${claimSentences ? claimSentences + "\n\n" : ""}Với ${name}, anh chị đọc kỹ nhãn trên hộp và mục lưu ý trước khi dùng. Anh chị còn thắc mắc gì về "${t.toLowerCase()}"? Để lại bình luận nhé.`;
   return {
     audience: "Người trung niên – cao tuổi quan tâm sức khỏe hằng ngày (bản giả lập).",
     titles: [`${short}: điều nên biết${fixed ? " (sửa)" : ""}`, `Hỏi nhanh – đáp gọn: ${short.slice(0, 30)}`, `Anh chị đã biết điều này chưa? ${short.slice(0, 20)}`],

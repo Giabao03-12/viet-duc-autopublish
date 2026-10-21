@@ -1,4 +1,4 @@
-import { env, isMockLLM, isMockMeta } from "./config";
+import { channelConfigured, env, isMockLLM, isMockMeta } from "./config";
 import { approvedClaims, portraitConfirmed } from "./catalog";
 import * as meta from "./meta";
 import { getStore } from "./store";
@@ -22,8 +22,8 @@ export async function runPreflight(): Promise<{ ok: boolean; checks: Check[] }> 
   const mock = isMockMeta();
   try {
     const page = await meta.getPage();
-    add("page", "Kết nối Fanpage (Graph API)", !mock, mock ? "ĐANG GIẢ LẬP (MOCK_META=1)" : `Đọc được Page: ${page.name} (ID ${page.id})`);
-  } catch (e) { add("page", "Kết nối Fanpage (Graph API)", false, (e as Error).message); }
+    add("page", "Kết nối Fanpage Khoẻ Trẻ Đẹp (Graph API)", !mock, mock ? "ĐANG GIẢ LẬP (MOCK_META=1)" : `Đọc được Page: ${page.name} (ID ${page.id})`);
+  } catch (e) { add("page", "Kết nối Fanpage Khoẻ Trẻ Đẹp (Graph API)", false, (e as Error).message); }
 
   try {
     const t = await meta.tokenHealth();
@@ -31,6 +31,15 @@ export async function runPreflight(): Promise<{ ok: boolean; checks: Check[] }> 
     const detail = mock ? "giả lập" : !t.valid ? `Không hợp lệ: ${t.note ?? ""}` : missing.length ? `Thiếu quyền: ${missing.join(", ")}` : `Hợp lệ (${t.neverExpires ? "không hết hạn" : t.daysLeft === null ? "không rõ hạn" : t.daysLeft + " ngày còn lại"})`;
     add("token", "Token Facebook", t.valid && !missing.length && !mock, detail);
   } catch (e) { add("token", "Token Facebook", false, (e as Error).message); }
+
+  // Page thứ hai (Sống Khỏe) – không chặn kích hoạt; chưa cấu hình thì khung 07:00/19:00 tự bỏ qua
+  if (channelConfigured("sk")) {
+    try {
+      const pg = await meta.inChannel("sk", () => meta.getPage());
+      const t = await meta.inChannel("sk", () => meta.tokenHealth());
+      add("page-sk", "Page Sống Khỏe (07:00 & 19:00)", t.valid && !isMockMeta(), `Đọc được Page: ${pg.name} (ID ${pg.id}); token ${t.valid ? "hợp lệ" : "KHÔNG hợp lệ"}`, false);
+    } catch (e) { add("page-sk", "Page Sống Khỏe (07:00 & 19:00)", false, (e as Error).message, false); }
+  } else add("page-sk", "Page Sống Khỏe (07:00 & 19:00)", false, "Chưa cấu hình META_PAGE_ID_SK / META_PAGE_ACCESS_TOKEN_SK – khung 07:00/19:00 đang tạm bỏ qua", false);
 
   add("baseurl", "PUBLIC_BASE_URL (https)", /^https:\/\//.test(env("PUBLIC_BASE_URL")), env("PUBLIC_BASE_URL") || "Thiếu – Facebook cần URL https công khai để tải ảnh");
   add("cron", "CRON_SECRET", env("CRON_SECRET").length >= 16, env("CRON_SECRET").length >= 16 ? "Đã đặt" : "Cần chuỗi ngẫu nhiên ≥ 16 ký tự");

@@ -60,7 +60,7 @@ export default function Home() {
       <section style={{ ...card, borderColor: on ? "#0a7" : "#c8102e", borderWidth: 2 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: on ? "#085" : "#c8102e" }}>{on ? "● ĐANG BẬT – tự đăng 06:00 & 18:00" : "● ĐANG TẮT – không đăng gì"}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: on ? "#085" : "#c8102e" }}>{on ? "● ĐANG BẬT – Khoẻ Trẻ Đẹp 06:00 & 18:00 · Sống Khỏe 07:00 & 19:00" : "● ĐANG TẮT – không đăng gì"}</div>
             <div style={{ fontSize: 13, color: "#555" }}>Giờ Việt Nam (Asia/Ho_Chi_Minh), 7 ngày/tuần. Lưu trữ: {state.store}. Claim đã duyệt: {state.approvedClaims.join(", ") || "chưa có"}.</div>
           </div>
           {on ? (
@@ -77,8 +77,10 @@ export default function Home() {
         <h2 style={{ fontSize: 17, marginTop: 0 }}>Kiểm tra trước khi kích hoạt</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("pre", async () => setPre(await api("/api/admin/preflight", {})))}>1. Kiểm tra kết nối &amp; cấu hình</button>
-          <button style={btnGhost} disabled={!!busy} onClick={() => run("d0600", async () => setDraft((await api("/api/admin/dry-run", { slot: "0600" })).post))}>2a. Tạo thử bài 06:00</button>
-          <button style={btnGhost} disabled={!!busy} onClick={() => run("d1800", async () => setDraft((await api("/api/admin/dry-run", { slot: "1800" })).post))}>2b. Tạo thử bài 18:00</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("d0600", async () => setDraft((await api("/api/admin/dry-run", { slot: "0600" })).post))}>2a. Thử 06:00 (Khoẻ Trẻ Đẹp)</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("d1800", async () => setDraft((await api("/api/admin/dry-run", { slot: "1800" })).post))}>2b. Thử 18:00 (Khoẻ Trẻ Đẹp)</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("d0700", async () => setDraft((await api("/api/admin/dry-run", { slot: "0700" })).post))}>2c. Thử 07:00 (Sống Khỏe)</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("d1900", async () => setDraft((await api("/api/admin/dry-run", { slot: "1900" })).post))}>2d. Thử 19:00 (Sống Khỏe)</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("notify", async () => { const r = await api("/api/admin/notify-test", {}); alert(r.detail.join(String.fromCharCode(10))); })}>Gửi thử thông báo</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("fbcheck", async () => { const r = await api("/api/admin/fb-check", {}); setFbCheck(r.detail); })}>Kiểm tra Facebook</button>
         </div>
@@ -128,17 +130,17 @@ export default function Home() {
         <h2 style={{ fontSize: 17, marginTop: 0 }}>Bài gần đây</h2>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-            <thead><tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}><th>Ngày</th><th>Giờ</th><th>Chủ đề</th><th>Trạng thái</th><th>Facebook Post ID</th><th>Ghi chú</th></tr></thead>
+            <thead><tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}><th>Ngày</th><th>Giờ</th><th>Page</th><th>Chủ đề</th><th>Trạng thái</th><th>Facebook Post ID</th><th>Ghi chú</th></tr></thead>
             <tbody>
               {state.posts.map((p: Any) => (
                 <tr key={p.id} style={{ borderBottom: "1px solid #eee", verticalAlign: "top" }}>
-                  <td>{p.date}</td><td>{p.slot.slice(0, 2)}:{p.slot.slice(2)}</td><td>{p.topicLabel}{p.dryRun ? " (thử)" : ""}</td>
+                  <td>{p.date}</td><td>{p.slot.slice(0, 2)}:{p.slot.slice(2)}</td><td>{p.channel === "sk" ? "Sống Khỏe" : "Khoẻ Trẻ Đẹp"}</td><td>{p.topicLabel}{p.dryRun ? " (thử)" : ""}</td>
                   <td style={{ color: statusColor[p.status], fontWeight: 700 }}>{p.status}</td>
                   <td>{p.fbPermalink ? <a href={p.fbPermalink} target="_blank">{p.fbPostId}</a> : p.fbPostId ?? "—"}</td>
                   <td style={{ maxWidth: 260 }}>{p.error ?? ""}</td>
                 </tr>
               ))}
-              {!state.posts.length && <tr><td colSpan={6}>Chưa có bài nào.</td></tr>}
+              {!state.posts.length && <tr><td colSpan={7}>Chưa có bài nào.</td></tr>}
             </tbody>
           </table>
         </div>

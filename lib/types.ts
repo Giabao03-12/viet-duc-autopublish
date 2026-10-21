@@ -1,4 +1,4 @@
-export type SlotId = "0600" | "1800";
+export type SlotId = "0600" | "1800" | "0700" | "1900";
 export type SlotKind = "education" | "product";
 
 export type PostStatus =
@@ -12,6 +12,7 @@ export type PostStatus =
 export interface Post {
   id: string;
   slot: SlotId;
+  channel?: "ktd" | "sk"; // Fanpage đích (thiếu = ktd, cho các bài cũ)
   kind: SlotKind;
   date: string; // YYYY-MM-DD (giờ Việt Nam) của khung giờ đăng
   publishAt: string; // ISO
