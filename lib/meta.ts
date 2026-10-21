@@ -51,20 +51,74 @@ export async function tokenHealth(): Promise<TokenHealth> {
   return { valid: j.data.is_valid, expiresAt: never ? null : j.data.expires_at, neverExpires: never, scopes: j.data.scopes ?? [], daysLeft };
 }
 
-export interface PublishResult { fbPostId: string; photoId?: string }
+export interface PublishResult { fbPostId: string; photoId?: string; method?: string }
 
-/** Hẹn giờ ngay trên Facebook: Facebook tự đăng đúng giờ, không phụ thuộc độ chính xác của cron. */
+export interface ScheduledItem { id: string; message?: string; scheduled_publish_time?: number | string }
+
+export async function listScheduled(): Promise<ScheduledItem[]> {
+  const r = await graph<{ data: ScheduledItem[] }>("GET", `/${pageId()}/scheduled_posts`, { fields: "id,message,scheduled_publish_time", limit: 50 });
+  return r.data ?? [];
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Tìm bài đang hẹn giờ có nội dung bắt đầu giống `message` (thử vài lần vì Facebook cập nhật chậm vài giây). */
+async function findScheduledByMessage(message: string): Promise<ScheduledItem | undefined> {
+  const key = message.normalize("NFC").replace(/\s+/g, " ").trim().slice(0, 40);
+  for (let i = 0; i < 4; i++) {
+    try {
+      const hit = (await listScheduled()).find((x) => (x.message ?? "").normalize("NFC").replace(/\s+/g, " ").trim().startsWith(key));
+      if (hit) return hit;
+    } catch { /* thử lại */ }
+    await sleep(2500);
+  }
+  return undefined;
+}
+
+/**
+ * Hẹn giờ ngay trên Facebook (Facebook tự đăng đúng giờ, không phụ thuộc độ chính xác của cron).
+ * Sau khi hẹn, BẮT BUỘC xác minh bài có trong danh sách "đã lên lịch" của Page; trả về MÃ BÀI VIẾT thật.
+ * Cách 1 (chuẩn): tải ảnh ẩn -> tạo bài /feed hẹn giờ có gắn ảnh. Cách 2 (dự phòng): /photos có scheduled_publish_time.
+ * Cả hai không xác minh được -> ném lỗi để báo ngay (không đợi tới giờ đăng mới biết).
+ */
 export async function schedulePhoto(opts: { imageUrl: string; message: string; publishAt: Date }): Promise<PublishResult> {
   const ts = Math.floor(opts.publishAt.getTime() / 1000);
-  if (isMockMeta()) return { fbPostId: `MOCK_${pageId() || "page"}_${ts}`, photoId: `MOCKPHOTO_${ts}` };
-  const j = await graph<{ id: string; post_id?: string }>("POST", `/${pageId()}/photos`, {
-    url: opts.imageUrl,
-    caption: opts.message,
-    published: false,
-    scheduled_publish_time: ts,
-    unpublished_content_type: "SCHEDULED",
-  });
-  return { fbPostId: j.post_id ?? j.id, photoId: j.id };
+  if (isMockMeta()) return { fbPostId: `MOCK_${pageId() || "page"}_${ts}`, photoId: `MOCKPHOTO_${ts}`, method: "mock" };
+  const errors: string[] = [];
+
+  // Cách 1: ảnh ẩn + bài hẹn giờ có gắn ảnh
+  try {
+    const photo = await graph<{ id: string }>("POST", `/${pageId()}/photos`, { url: opts.imageUrl, published: false, temporary: true });
+    const post = await graph<{ id: string }>("POST", `/${pageId()}/feed`, {
+      message: opts.message,
+      attached_media: JSON.stringify([{ media_fbid: photo.id }]),
+      published: false,
+      scheduled_publish_time: ts,
+    });
+    const found = await findScheduledByMessage(opts.message);
+    if (found) return { fbPostId: found.id, photoId: photo.id, method: "feed+photo" };
+    errors.push(`Cách 1 tạo bài ${post.id} nhưng không thấy trong danh sách lên lịch`);
+    try { await graph("DELETE", `/${post.id}`); } catch { /* bỏ qua */ }
+  } catch (e) {
+    if (e instanceof MetaError && e.isTokenError) throw e;
+    errors.push(`Cách 1 lỗi: ${(e as Error).message}`);
+  }
+
+  // Cách 2: /photos có hẹn giờ
+  try {
+    const j = await graph<{ id: string; post_id?: string }>("POST", `/${pageId()}/photos`, {
+      url: opts.imageUrl, caption: opts.message, published: false, scheduled_publish_time: ts, unpublished_content_type: "SCHEDULED",
+    });
+    const found = await findScheduledByMessage(opts.message);
+    if (found) return { fbPostId: found.id, photoId: j.id, method: "photos-scheduled" };
+    errors.push(`Cách 2 tạo ảnh ${j.id} nhưng không thấy trong danh sách lên lịch`);
+    try { await graph("DELETE", `/${j.id}`); } catch { /* bỏ qua */ }
+  } catch (e) {
+    if (e instanceof MetaError && e.isTokenError) throw e;
+    errors.push(`Cách 2 lỗi: ${(e as Error).message}`);
+  }
+
+  throw new MetaError(undefined, undefined, `Không hẹn giờ được trên Facebook. ${errors.join(" | ")}`);
 }
 
 /** Đăng ngay – CHỈ dùng cho bài đăng thử có xác nhận của chủ page. */

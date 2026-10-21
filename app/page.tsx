@@ -25,6 +25,7 @@ export default function Home() {
   const [msg, setMsg] = useState("");
   const [pre, setPre] = useState<Any>(null);
   const [draft, setDraft] = useState<Any>(null);
+  const [fbCheck, setFbCheck] = useState<string[] | null>(null);
 
   const load = useCallback(async () => {
     try { setState(await api("/api/admin/state")); setAuthed(true); } catch { setAuthed(false); }
@@ -79,8 +80,10 @@ export default function Home() {
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d0600", async () => setDraft((await api("/api/admin/dry-run", { slot: "0600" })).post))}>2a. Tạo thử bài 06:00</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d1800", async () => setDraft((await api("/api/admin/dry-run", { slot: "1800" })).post))}>2b. Tạo thử bài 18:00</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("notify", async () => { const r = await api("/api/admin/notify-test", {}); alert(r.detail.join(String.fromCharCode(10))); })}>Gửi thử thông báo</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("fbcheck", async () => { const r = await api("/api/admin/fb-check", {}); setFbCheck(r.detail); })}>Kiểm tra Facebook</button>
         </div>
         {busy && <p>Đang chạy: {busy}…</p>}
+        {fbCheck && <pre style={{ whiteSpace: "pre-wrap", fontSize: 13, background: "#faf8f2", padding: 10, borderRadius: 8 }}>{fbCheck.join(String.fromCharCode(10))}</pre>}
         {pre && (
           <ul style={{ paddingLeft: 18 }}>
             {pre.checks.map((c: Any) => (

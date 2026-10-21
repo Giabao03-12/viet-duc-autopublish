@@ -232,7 +232,7 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     const s2 = await getSettings();
     s2.lastPrepare = { ...(s2.lastPrepare ?? {}), [slot]: now() };
     await saveSettings(s2);
-    await log("info", "prepare", `[${slot}] ${date} đã hẹn giờ trên Facebook: ${res.fbPostId}`, { topic: pick.topic.id });
+    await log("info", "prepare", `[${slot}] ${date} đã hẹn giờ trên Facebook (đã xác minh trong danh sách lên lịch, cách: ${res.method}): ${res.fbPostId}`, { topic: pick.topic.id });
     await notify("info", `Đã hẹn ${SLOTS[slot].label} ${date}`, `Tiêu đề: ${post.title}\nChủ đề: ${post.topicLabel}\nFacebook Post ID: ${res.fbPostId}\nGiờ đăng: ${at.toISOString()} (${date} ${String(SLOTS[slot].hour).padStart(2, "0")}:00 giờ VN)`);
     return { status: "scheduled", post };
   } catch (e) {
