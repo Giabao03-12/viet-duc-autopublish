@@ -41,12 +41,13 @@ export async function POST(req: Request) {
     for (const x of data.slice(0, 5)) out.push(`  • ${vn(x.scheduled_publish_time)} – ${short(x.message)}`);
   }
 
-  const pub = await g(`/${pid}/published_posts`, { fields: "id,message,created_time", limit: "5" });
+  const pub = await g(`/${pid}/published_posts`, { fields: "id,message,created_time,permalink_url", limit: "5" });
   if (pub.error) out.push(`Bài đã đăng: LỖI ${pub.error.code} – ${pub.error.message}`);
   else {
-    const data = (pub.data as { id: string; message?: string; created_time?: string }[]) ?? [];
+    const data = (pub.data as { id: string; message?: string; created_time?: string; permalink_url?: string }[]) ?? [];
     out.push(`5 bài đã đăng gần nhất:`);
-    for (const x of data) out.push(`  • ${vn(x.created_time)} – ${short(x.message)}`);
+    for (const x of data) out.push(`  • ${vn(x.created_time)} – ${short(x.message)}${x.permalink_url ? "
+    " + x.permalink_url : ""}`);
   }
 
   const mine = (await listPosts(10)).filter((p) => !p.dryRun && p.fbPostId).slice(0, 3);
