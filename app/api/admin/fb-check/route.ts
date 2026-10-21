@@ -46,8 +46,7 @@ export async function POST(req: Request) {
   else {
     const data = (pub.data as { id: string; message?: string; created_time?: string; permalink_url?: string }[]) ?? [];
     out.push(`5 bài đã đăng gần nhất:`);
-    for (const x of data) out.push(`  • ${vn(x.created_time)} – ${short(x.message)}${x.permalink_url ? "
-    " + x.permalink_url : ""}`);
+    for (const x of data) out.push(`  • ${vn(x.created_time)} – ${short(x.message)}${x.permalink_url ? " → " + x.permalink_url : ""}`);
   }
 
   const mine = (await listPosts(10)).filter((p) => !p.dryRun && p.fbPostId).slice(0, 3);
