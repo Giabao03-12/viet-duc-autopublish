@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { CHANNELS, channelConfigured, env, type ChannelId } from "@/lib/config";
-import { inChannel } from "@/lib/meta";
+import { checkTokenMatchesPage, inChannel } from "@/lib/meta";
 import { listPosts } from "@/lib/pipeline";
 import { tokenHealth } from "@/lib/meta";
 
@@ -42,6 +42,8 @@ async function checkOne(ch: ChannelId, out: string[]) {
     out.push(`Token: ${t.valid ? "hợp lệ" : "KHÔNG hợp lệ " + (t.note ?? "")}; quyền: ${t.scopes.join(", ") || "không đọc được"}`);
   } catch (e) { out.push(`Token: lỗi ${(e as Error).message}`); }
 
+  const m = await checkTokenMatchesPage();
+  out.push(`${m.ok ? "✅" : "❌"} ${m.detail}`);
   const page = await g(`/${pid}`, { fields: "name,is_published,verification_status" });
   out.push(page.error ? `Page: LỖI ${page.error.code} – ${page.error.message}` : `Page: ${page.name} (công khai: ${page.is_published === false ? "KHÔNG" : "có"})`);
 

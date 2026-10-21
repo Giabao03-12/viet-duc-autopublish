@@ -39,6 +39,26 @@ export async function getPage(): Promise<PageInfo> {
   return graph<PageInfo>("GET", `/${pageId()}`, { fields: "id,name,link" });
 }
 
+/**
+ * Token phải là TOKEN CỦA ĐÚNG PAGE (không phải token người dùng, không phải token Page khác).
+ * Với token Page, /me trả về chính Page đó.
+ */
+export async function checkTokenMatchesPage(): Promise<{ ok: boolean; detail: string }> {
+  if (isMockMeta()) return { ok: true, detail: "giả lập" };
+  const ch = CHANNELS[currentChannel()];
+  if (!pageId()) return { ok: false, detail: `Thiếu ${ch.pageIdEnv}` };
+  try {
+    const me = await graph<{ id: string; name?: string }>("GET", "/me", { fields: "id,name" });
+    if (me.id === pageId()) return { ok: true, detail: `Token đúng của Page ${me.name ?? me.id}` };
+    return {
+      ok: false,
+      detail: `${ch.tokenEnv} đang là token của "${me.name ?? me.id}" (ID ${me.id}), KHÔNG phải token của Page ${ch.name} (ID ${pageId()} trong ${ch.pageIdEnv}). Có thể đã dán token người dùng hoặc dán nhầm biến.`,
+    };
+  } catch (e) {
+    return { ok: false, detail: `Không kiểm tra được token: ${(e as Error).message}` };
+  }
+}
+
 export interface TokenHealth { valid: boolean; expiresAt: number | null; neverExpires: boolean; scopes: string[]; daysLeft: number | null; note?: string }
 
 export async function tokenHealth(): Promise<TokenHealth> {

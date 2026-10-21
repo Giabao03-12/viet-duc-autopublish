@@ -104,7 +104,7 @@ export async function composeAndCheck(ctx: DraftContext, allowedClaimIds: string
     let issues = [...rule.issues];
     if (!issues.length) {
       try {
-        const ai = await llm.reviewDraft(ctx, title, draft.body);
+        const ai = await llm.reviewDraft(ctx, title, draft.body, buildFooter(ctx.kind, ctx.product, BRAND.educationFooter));
         if (!ai.pass) issues = ai.issues.length ? ai.issues.map((i) => `[ai-review] ${i}`) : ["[ai-review] Không đạt kiểm duyệt (không nêu lý do)"];
       } catch (e) {
         issues = [`[ai-review] Không chạy được bước kiểm duyệt AI: ${(e as Error).message}`]; // lỗi kiểm duyệt = KHÔNG đăng
@@ -229,6 +229,12 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     // Kiểm tra lại trạng thái ngay trước khi hẹn: người dùng có thể vừa TẮT.
     if (!(await getSettings()).autoEnabled) { post.status = "cancelled"; post.error = "Bị tắt trong lúc chuẩn bị"; await savePost(post); return { status: "disabled", post }; }
 
+    const match = await meta.inChannel(ch, () => meta.checkTokenMatchesPage());
+    if (!match.ok) {
+      await notify("error", `Token sai Page – ${CHANNELS[ch].name}`, `${match.detail}
+Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`);
+      return fail("failed", `Token không khớp Page: ${match.detail}`, { ...common, caption: composed.fullCaption, imageUrl: post.imageUrl });
+    }
     const imageUrl = post.imageUrl;
     const res = await meta.inChannel(ch, () => meta.schedulePhoto({ imageUrl, message: post.caption, publishAt: at }));
     post.fbPostId = res.fbPostId;
@@ -294,7 +300,12 @@ export async function watchdog(at: Date = new Date()) {
       const t = await meta.inChannel(ch, () => meta.tokenHealth());
       if (!t.valid) { report.push(`Token ${nm} KHÔNG hợp lệ`); await notify("error", `Token Facebook không hợp lệ – ${nm}`, t.note ?? "Hãy tạo lại Page Access Token.", `token-invalid:${ch}`); }
       else if (t.daysLeft !== null && t.daysLeft <= 7) { report.push(`Token ${nm} còn ${t.daysLeft} ngày`); await notify("warn", `Token Facebook sắp hết hạn – ${nm}`, `Còn ${t.daysLeft} ngày.`, `token-expiring:${ch}`); }
-      else report.push(`Token ${nm} ổn`);
+      else {
+        const m = await meta.inChannel(ch, () => meta.checkTokenMatchesPage());
+        if (!m.ok) { report.push(`Token ${nm} SAI PAGE`); await notify("error", `Token sai Page – ${nm}`, `${m.detail}
+Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`); }
+        else report.push(`Token ${nm} ổn`);
+      }
     } catch (e) { report.push(`Không kiểm tra được token ${nm}: ${(e as Error).message}`); }
   }
 
