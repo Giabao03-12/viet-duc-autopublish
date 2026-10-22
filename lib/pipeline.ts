@@ -314,8 +314,8 @@ Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`); }
   for (const p of posts) {
     if (!p.fbPostId) continue;
     const due = new Date(p.publishAt).getTime();
-    // Bài đang hẹn đã quá giờ, HOẶC bài bị đánh "thất bại" trong 24h qua (có thể do báo nhầm trước đây) -> đối soát lại
-    const recheckFailed = p.status === "failed" && at.getTime() - due < 24 * 3600000;
+    // Bài đang hẹn đã quá giờ, HOẶC bài bị đánh "thất bại" trong 72h qua (có thể do báo nhầm trước đây) -> đối soát lại
+    const recheckFailed = p.status === "failed" && at.getTime() - due < 72 * 3600000;
     if (p.status !== "scheduled" && !recheckFailed) continue;
     if (due > at.getTime()) continue;
     try {
