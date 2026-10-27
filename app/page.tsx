@@ -81,6 +81,7 @@ export default function Home() {
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d1800", async () => setDraft((await api("/api/admin/dry-run", { slot: "1800" })).post))}>2b. Thử 18:00 (Khoẻ Trẻ Đẹp)</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d0700", async () => setDraft((await api("/api/admin/dry-run", { slot: "0700" })).post))}>2c. Thử 07:00 (Sống Khỏe)</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("d1900", async () => setDraft((await api("/api/admin/dry-run", { slot: "1900" })).post))}>2d. Thử 19:00 (Sống Khỏe)</button>
+          <button style={btnGhost} disabled={!!busy} onClick={() => run("dvideo", async () => { const r = await api("/api/admin/dry-run", { slot: "1930" }); setDraft(r.post ?? null); if (!r.post) alert(r.reason ?? "Không có video trong hàng chờ"); else if (r.post.error) alert("Video chưa đăng được: " + r.post.error); })}>2e. Thử video (Sống Khỏe)</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("notify", async () => { const r = await api("/api/admin/notify-test", {}); alert(r.detail.join(String.fromCharCode(10))); })}>Gửi thử thông báo</button>
           <button style={btnGhost} disabled={!!busy} onClick={() => run("fbcheck", async () => { const r = await api("/api/admin/fb-check", {}); setFbCheck(r.detail); })}>Kiểm tra Facebook</button>
         </div>

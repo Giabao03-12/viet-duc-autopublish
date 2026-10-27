@@ -148,6 +148,42 @@ export async function schedulePhoto(opts: { imageUrl: string; message: string; p
   throw new MetaError(undefined, undefined, `Không hẹn giờ được trên Facebook. ${errors.join(" | ")}`);
 }
 
+/**
+ * Hẹn giờ đăng VIDEO: Facebook tự tải `file_url` (link công khai) rồi đăng đúng giờ.
+ * Trả về mã video; sau đó phải kiểm tra bằng getVideoState.
+ */
+export async function scheduleVideo(opts: { fileUrl: string; description: string; title: string; publishAt: Date }): Promise<{ videoId: string }> {
+  const ts = Math.floor(opts.publishAt.getTime() / 1000);
+  if (isMockMeta()) return { videoId: `MOCKVIDEO_${ts}` };
+  const j = await graph<{ id: string }>("POST", `/${pageId()}/videos`, {
+    file_url: opts.fileUrl,
+    description: opts.description,
+    title: opts.title.slice(0, 100),
+    published: false,
+    scheduled_publish_time: ts,
+  });
+  return { videoId: j.id };
+}
+
+export interface VideoState { exists: boolean; published: boolean; scheduledFor?: number; processing?: string; error?: string; permalink?: string }
+
+/** Trạng thái video trên Facebook: đã đăng chưa, đang xử lý, hay Facebook không tải được file. */
+export async function getVideoState(id: string): Promise<VideoState> {
+  if (isMockMeta()) return { exists: true, published: true, permalink: `https://facebook.com/${id}` };
+  try {
+    const j = await graph<{ published?: boolean; scheduled_publish_time?: number | string; permalink_url?: string; status?: { video_status?: string; processing_progress?: number } }>(
+      "GET", `/${id}`, { fields: "published,scheduled_publish_time,permalink_url,status" });
+    const vs = j.status?.video_status;
+    return {
+      exists: true, published: j.published === true, scheduledFor: j.scheduled_publish_time ? Number(j.scheduled_publish_time) : undefined,
+      processing: vs, error: vs === "error" ? "Facebook báo lỗi xử lý video (thường do không tải được file từ link)" : undefined, permalink: fullLink(j.permalink_url),
+    };
+  } catch (e) {
+    if (e instanceof MetaError && (e.code === 100 || e.code === 803)) return { exists: false, published: false };
+    throw e;
+  }
+}
+
 /** Đăng ngay – CHỈ dùng cho bài đăng thử có xác nhận của chủ page. */
 export async function publishPhotoNow(opts: { imageUrl: string; message: string }): Promise<PublishResult> {
   if (isMockMeta()) return { fbPostId: `MOCK_${pageId() || "page"}_NOW_${Date.now()}` };

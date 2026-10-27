@@ -8,6 +8,7 @@ import { notify } from "./notify";
 import { log } from "./log";
 import { getStore } from "./store";
 import type { Post, Settings, SlotId } from "./types";
+import { checkVideoUrl, clearVideoState, driveDirectUrl, getVideoState as getVideoRec, pendingVideos, setVideoState, type VideoEntry } from "./videos";
 
 const now = () => new Date().toISOString();
 
@@ -146,7 +147,9 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
   }
 
   const { date, at } = nextSlotInstant(at0, slot);
-  const kind = SLOTS[slot].kind;
+  const slotKind = SLOTS[slot].kind;
+  if (slotKind === "video") return prepareVideoSlot({ slot, ch, date, at, at0, dryRun });
+  const kind: "education" | "product" = slotKind;
   const leadMin = (at.getTime() - at0.getTime()) / 60000;
 
   if (!dryRun && leadMin < MIN_LEAD_MIN) {
@@ -257,6 +260,122 @@ Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`);
   }
 }
 
+// ───────────────────────── Video đã dựng (Page Sống Khỏe) ─────────────────────────
+interface VideoSlotArgs { slot: SlotId; ch: ChannelId; date: string; at: Date; at0: Date; dryRun: boolean }
+
+/** Chuẩn bị 1 khung giờ VIDEO: lấy video kế tiếp trong hàng chờ, kiểm duyệt caption, kiểm tra link Drive, hẹn giờ trên Facebook. */
+async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
+  const { slot, ch, date, at, at0, dryRun } = a;
+  const label = SLOTS[slot].label;
+  const leadMin = (at.getTime() - at0.getTime()) / 60000;
+  if (!dryRun && leadMin < MIN_LEAD_MIN) {
+    await log("warn", "prepare", `[${slot}] Quá sát giờ (${Math.round(leadMin)} phút) – bỏ lượt ${date}`);
+    await notify("warn", `Bỏ lượt ${label} ${date}`, `Cron chạy quá muộn (còn ${Math.round(leadMin)} phút). Hệ thống KHÔNG đăng bù.`, `late:${date}:${slot}`);
+    return { status: "skipped", reason: "Quá sát giờ đăng" };
+  }
+
+  const lockKey = `slot:${date}:${slot}`;
+  const postId = randomUUID();
+  if (!dryRun && !(await getStore().setnx(lockKey, postId, 4 * 86400))) {
+    await log("info", "prepare", `[${slot}] ${date} đã được chuẩn bị – bỏ qua (chống trùng)`);
+    return { status: "duplicate", reason: "Khung giờ này đã có bài" };
+  }
+
+  const queue = await pendingVideos();
+  if (!queue.length) {
+    if (!dryRun) await getStore().del(lockKey); // hàng chờ trống là bình thường; khi có video mới, lượt sau sẽ nhận
+    await log("info", "prepare", `[${slot}] ${date}: hàng chờ video trống – không có gì để đăng`);
+    return { status: "skipped", reason: "Hàng chờ video trống (chưa có video mới)" };
+  }
+
+  const base: Post = {
+    id: postId, slot, channel: ch, kind: "video", date, publishAt: at.toISOString(), status: "draft", dryRun,
+    topicId: "", topicLabel: "", titles: [], title: "", caption: "", hashtags: [], claimIds: [],
+    imageKind: "education", attempts: 0, complianceLog: [], createdAt: now(), updatedAt: now(),
+  };
+  const fail = async (status: "skipped" | "failed", reason: string, extra?: Partial<Post>): Promise<PrepareResult> => {
+    const p: Post = { ...base, ...extra, status, error: reason };
+    await savePost(p);
+    if (!dryRun && !p.fbPostId) await getStore().del(lockKey);
+    await log(status === "failed" ? "error" : "warn", "prepare", `[${slot}] ${date} ${status}: ${reason}`);
+    if (!dryRun) await notify(status === "failed" ? "error" : "warn", `${status === "failed" ? "LỖI" : "Bỏ lượt"} ${label} ${date}`, reason, `${status}:${date}:${slot}`);
+    return { status, post: p, reason };
+  };
+
+  try {
+    // Chọn video đầu hàng chờ có caption đạt kiểm duyệt; caption không đạt thì chặn video đó (kèm báo) rồi xét video kế tiếp
+    let chosen: VideoEntry | null = null;
+    let caption = "";
+    for (const v of queue) {
+      const rule = checkContent({
+        kind: "education", title: v.title, body: v.caption, hashtags: v.hashtags, approved: approvedClaims(), allowedClaimIds: [], recentCaptions: [],
+      });
+      if (rule.issues.length) {
+        if (!dryRun) {
+          await setVideoState(v.id, { status: "blocked", reason: rule.issues.join(" | "), at: now() });
+          await notify("error", `Video bị chặn: ${v.fileName}`, `Caption không đạt kiểm duyệt nên video KHÔNG được đăng:\n${rule.issues.join("\n")}\nHãy nhờ Claude sửa caption rồi thêm lại.`, `vblocked:${v.id}`);
+        }
+        await log("warn", "prepare", `[${slot}] Video ${v.id} bị chặn: ${rule.issues.join(" | ")}`);
+        continue;
+      }
+      chosen = v;
+      caption = `${v.title}\n\n${v.caption}\n\n${buildFooter("education", undefined, BRAND.educationFooter)}\n\n${v.hashtags.join(" ")}`;
+      break;
+    }
+    if (!chosen) {
+      if (!dryRun) await getStore().del(lockKey);
+      return dryRun ? { status: "skipped", reason: "Mọi video trong hàng chờ đều bị chặn kiểm duyệt" } : fail("skipped", "Mọi video trong hàng chờ đều bị chặn kiểm duyệt – cần sửa caption");
+    }
+
+    const fileUrl = driveDirectUrl(chosen.driveFileId);
+    const common: Partial<Post> = { topicId: chosen.id, topicLabel: chosen.fileName, videoId: chosen.id, driveFileId: chosen.driveFileId, titles: [chosen.title], title: chosen.title, hashtags: chosen.hashtags, caption, attempts: 1, complianceLog: ["Caption video đạt bộ luật kiểm duyệt giáo dục"] };
+
+    const chk = await checkVideoUrl(fileUrl);
+    if (!chk.ok) {
+      const prev = await getVideoRec(chosen.id);
+      const attempts = (prev && prev.status === "retry" ? prev.attempts : 0) + 1;
+      // Lỗi link (thường do chưa chia sẻ Drive) KHÔNG chặn vĩnh viễn: giữ video ở đầu hàng chờ để lượt sau thử lại khi bạn chia sẻ xong
+      if (!dryRun) await setVideoState(chosen.id, { status: "retry", attempts, reason: chk.detail, at: now() });
+      return fail("failed", `Link video không tải được (${chosen.fileName}): ${chk.detail}. Kiểm tra file Drive đã chia sẻ "bất kỳ ai có link".`, common);
+    }
+
+    if (dryRun) {
+      const post: Post = { ...base, ...common, status: "draft" } as Post;
+      await savePost(post);
+      return { status: "draft", post };
+    }
+
+    if (!(await getSettings()).autoEnabled) { await getStore().del(lockKey); return { status: "disabled", reason: "Bị tắt trong lúc chuẩn bị" }; }
+    const match = await meta.inChannel(ch, () => meta.checkTokenMatchesPage());
+    if (!match.ok) {
+      await notify("error", `Token sai Page – ${CHANNELS[ch].name}`, `${match.detail}\nSửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`);
+      return fail("failed", `Token không khớp Page: ${match.detail}`, common);
+    }
+
+    const picked = chosen;
+    const res = await meta.inChannel(ch, () => meta.scheduleVideo({ fileUrl, description: caption, title: picked.title, publishAt: at }));
+    const stt = await meta.inChannel(ch, () => meta.getVideoState(res.videoId));
+    if (!stt.exists) return fail("failed", `Facebook nhận lệnh hẹn video nhưng không thấy video ${res.videoId}`, common);
+
+    const post: Post = { ...base, ...common, fbPostId: res.videoId, status: "scheduled" } as Post;
+    await savePost(post);
+    await setVideoState(picked.id, { status: "scheduled", slot, date, fbVideoId: res.videoId, at: now() });
+    const left = (await pendingVideos()).length;
+    const s2 = await getSettings();
+    s2.lastPrepare = { ...(s2.lastPrepare ?? {}), [slot]: now() };
+    await saveSettings(s2);
+    await log("info", "prepare", `[${slot}] ${date} đã hẹn video ${picked.fileName} (${chk.detail}): ${res.videoId}`);
+    const hh = String(SLOTS[slot].hour).padStart(2, "0");
+    const mm = String(SLOTS[slot].minute).padStart(2, "0");
+    await notify(left ? "info" : "warn", `Đã hẹn ${label} ${date}`, `Video: ${picked.fileName}\nTiêu đề: ${picked.title}\nFacebook Video ID: ${res.videoId}\nGiờ đăng: ${date} ${hh}:${mm} giờ VN\n${left ? `Còn ${left} video trong hàng chờ.` : "⚠️ Hàng chờ video đã HẾT – hãy đưa video mới vào Drive để lượt sau có bài."}`);
+    return { status: "scheduled", post };
+  } catch (e) {
+    const err = e as Error;
+    if (e instanceof meta.MetaError && e.isTokenError) await notify("error", "Token Facebook lỗi/hết hạn", `Meta trả lỗi ${e.code}: ${e.message}.`, `token-error:${ch}`);
+    return fail("failed", `Lỗi: ${err.message}`);
+  }
+}
+
 // ───────────────────────── Đăng thử (cần xác nhận của chủ page) ─────────────────────────
 export async function publishTestPost(id: string): Promise<Post> {
   const p = await getPost(id);
@@ -282,7 +401,7 @@ export async function cancelScheduled(): Promise<number> {
   let n = 0;
   for (const p of posts) {
     if (p.status === "scheduled" && new Date(p.publishAt).getTime() > Date.now() && p.fbPostId) {
-      try { const fid = p.fbPostId; await meta.inChannel(p.channel, () => meta.deleteRemote(fid)); p.status = "cancelled"; await savePost(p); n++; await getStore().del(`slot:${p.date}:${p.slot}`); }
+      try { const fid = p.fbPostId; await meta.inChannel(p.channel, () => meta.deleteRemote(fid)); p.status = "cancelled"; await savePost(p); n++; await getStore().del(`slot:${p.date}:${p.slot}`); if (p.kind === "video" && p.videoId) await clearVideoState(p.videoId); }
       catch (e) { await log("error", "cancel", `Không huỷ được ${p.fbPostId}: ${(e as Error).message}`); }
     }
   }
@@ -320,6 +439,21 @@ Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`); }
     if (due > at.getTime()) continue;
     try {
       const fid = p.fbPostId;
+      if (p.kind === "video") {
+        const v = await meta.inChannel(p.channel, () => meta.getVideoState(fid));
+        if (v.exists && v.published) {
+          p.status = "posted"; p.fbPermalink = v.permalink; p.error = undefined; await savePost(p);
+          if (p.videoId) await setVideoState(p.videoId, { status: "posted", fbVideoId: fid, permalink: v.permalink, at: now() });
+          report.push(`Đã đăng video ${p.slot} ${p.date}`);
+          await notify("info", `Đã đăng ${SLOTS[p.slot].label} ${p.date}`, `${p.title}\nVideo ID: ${fid}${v.permalink ? "\n" + v.permalink : ""}`);
+        } else if (v.error || !v.exists || at.getTime() - due > 30 * 60000) {
+          p.status = "failed"; p.error = v.error ?? (v.exists ? "Quá giờ 30 phút mà Facebook chưa đăng video" : "Video hẹn giờ không còn trên Facebook"); await savePost(p);
+          if (p.videoId) await setVideoState(p.videoId, { status: "retry", attempts: 1, reason: p.error, at: now() }); // cho phép thử lại ở lượt sau
+          report.push(`THẤT BẠI video ${p.slot} ${p.date}`);
+          await notify("error", `Đăng video thất bại ${SLOTS[p.slot].label} ${p.date}`, `${p.error}\nVideo ID: ${fid}. Video được đưa về hàng chờ để thử lại; hệ thống KHÔNG đăng bù trong khung giờ này.`, `postfail:${p.id}`);
+        }
+        continue;
+      }
       const r = await meta.inChannel(p.channel, () => meta.findRemotePost(fid, { title: p.title, publishAt: p.publishAt }));
       if (r.exists && r.published) {
         const wasFailed = p.status === "failed";
@@ -342,6 +476,7 @@ Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`); }
   if (settings.autoEnabled) {
     for (const slot of ALL_SLOTS) {
       if (!channelConfigured(SLOTS[slot].channel)) continue;
+      if (SLOTS[slot].kind === "video" && !(await pendingVideos()).length) continue; // hàng chờ trống là bình thường
       const { date, at: when } = nextSlotInstant(at, slot);
       const hours = (when.getTime() - at.getTime()) / 3600000;
       if (hours < 3 && !(await getStore().get(`slot:${date}:${slot}`))) {

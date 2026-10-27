@@ -17,6 +17,10 @@ export const SLOTS: Record<SlotId, { hour: number; minute: number; kind: SlotKin
   "1800": { hour: 18, minute: 0, kind: "product", channel: "ktd", label: "18:00 Khoẻ Trẻ Đẹp – Kiến thức sản phẩm / giải đáp" },
   "0700": { hour: 7, minute: 0, kind: "education", channel: "sk", label: "07:00 Sống Khỏe – Giáo dục sức khỏe" },
   "1900": { hour: 19, minute: 0, kind: "product", channel: "sk", label: "19:00 Sống Khỏe – Kiến thức sản phẩm / giải đáp" },
+  // Video đã dựng (hàng chờ content/videos.json, theo thứ tự tải lên Drive) – Page Sống Khỏe
+  "0615": { hour: 6, minute: 15, kind: "video", channel: "sk", label: "06:15 Sống Khỏe – Video" },
+  "1130": { hour: 11, minute: 30, kind: "video", channel: "sk", label: "11:30 Sống Khỏe – Video" },
+  "1930": { hour: 19, minute: 30, kind: "video", channel: "sk", label: "19:30 Sống Khỏe – Video" },
 };
 export const ALL_SLOTS = Object.keys(SLOTS) as SlotId[];
 

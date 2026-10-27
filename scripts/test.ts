@@ -171,6 +171,41 @@ async function main() {
     t("Bài 07:00 giờ VN = 00:00 UTC", e2.post?.publishAt === "2026-11-11T00:00:00.000Z", e2.post?.publishAt);
   }
 
+  // ── Video Page Sống Khỏe: 06:15 / 11:30 / 19:30, theo thứ tự tải lên ──
+  {
+    const { setVideoQueueForTest, loadQueue } = await import("../lib/videos");
+    useMemoryStore();
+    await saveSettings({ ...(await getSettings()), autoEnabled: true });
+    const cap = "Sau tuổi 40, nhiều anh chị nghĩ khớp đau là do thiếu canxi nên mua canxi về uống. Nhưng canxi chủ yếu giúp xương chắc khỏe, còn khớp gối là cả một hệ thống gồm sụn, dịch khớp, dây chằng, gân và cơ. Việt Đức chia sẻ vài điều nên quan tâm để chăm khớp lâu dài: giữ cân nặng hợp lý, vận động vừa sức, ăn uống đủ chất và đi khám khi đau kéo dài. Anh chị có hay thấy cứng gối buổi sáng không? Bình luận để mình cùng trao đổi nhé.";
+    const mkv = (n: number, created: string, caption = cap) => ({ id: `v${n}`, driveFileId: `FILE${n}`, fileName: `viet-duc-suc-khoe-0${n}.mp4`, createdTime: created, title: `Tiêu đề video ${n}`, caption, hashtags: ["#VietDucSongKhoe", "#SucKhoe"] });
+    // đưa vào NGƯỢC thứ tự để chứng minh hệ thống sắp theo thời điểm tải lên
+    setVideoQueueForTest([mkv(2, "2026-10-26T17:17:00Z"), mkv(1, "2026-10-26T15:13:00Z")]);
+    t("Hàng chờ sắp theo thời điểm tải lên", loadQueue()[0].id === "v1");
+
+    const D = new Date("2026-11-20T10:00:00Z"); // 17:00 VN
+    const a = await prepareSlot({ slot: "1930", now: D });
+    t("Video 19:30 hẹn thành công, Page Sống Khỏe", a.status === "scheduled" && a.post?.kind === "video" && a.post.channel === "sk" && a.post.videoId === "v1", JSON.stringify([a.status, a.reason]));
+    t("Giờ 19:30 VN = 12:30 UTC", a.post?.publishAt === "2026-11-20T12:30:00.000Z", a.post?.publishAt);
+    t("Caption video có cảnh báo + hashtag do hệ thống gắn", !!a.post && a.post.caption.includes("không thay thế tư vấn y khoa") && a.post.caption.includes("#VietDucSongKhoe"));
+    const dup = await prepareSlot({ slot: "1930", now: new Date(D.getTime() + 60000) });
+    t("Video: chạy lại cùng khung -> chống trùng", dup.status === "duplicate");
+    const b = await prepareSlot({ slot: "0615", now: new Date("2026-11-20T20:00:00Z") }); // 03:00 VN 21/11
+    t("Khung kế tiếp lấy video thứ hai (đúng thứ tự)", b.status === "scheduled" && b.post?.videoId === "v2" && b.post.publishAt === "2026-11-20T23:15:00.000Z", JSON.stringify([b.status, b.reason, b.post?.publishAt]));
+    const c = await prepareSlot({ slot: "1130", now: new Date("2026-11-21T01:00:00Z") });
+    t("Hàng chờ hết -> bỏ qua, không lỗi, không đăng bù", c.status === "skipped" && /trống/.test(c.reason ?? ""), JSON.stringify([c.status, c.reason]));
+    t("Hàng chờ trống không khoá khung giờ (video mới vào sẽ được nhận)", !(await (await import("../lib/store")).getStore().get("slot:2026-11-21:1130")));
+
+    // caption vi phạm -> video bị chặn, không đăng; video hợp lệ kế tiếp được dùng
+    useMemoryStore();
+    await saveSettings({ ...(await getSettings()), autoEnabled: true });
+    setVideoQueueForTest([mkv(1, "2026-10-26T15:13:00Z", cap + " Sản phẩm này chữa khỏi đau khớp, cam kết hiệu quả."), mkv(2, "2026-10-26T17:17:00Z")]);
+    const d = await prepareSlot({ slot: "1930", now: D });
+    t("Caption vi phạm bị chặn; video hợp lệ kế tiếp được đăng", d.status === "scheduled" && d.post?.videoId === "v2", JSON.stringify([d.status, d.reason]));
+    const { getVideoState } = await import("../lib/videos");
+    t("Video vi phạm được đánh dấu 'blocked'", (await getVideoState("v1"))?.status === "blocked");
+    setVideoQueueForTest(null);
+  }
+
   // ── Watchdog: đối soát + tự sửa báo nhầm "thất bại" ──
   {
     const { savePost: sp, getPost: gp, watchdog: wd } = await import("../lib/pipeline");

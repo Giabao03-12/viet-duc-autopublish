@@ -1,5 +1,5 @@
-export type SlotId = "0600" | "1800" | "0700" | "1900";
-export type SlotKind = "education" | "product";
+export type SlotId = "0600" | "1800" | "0700" | "1900" | "0615" | "1130" | "1930";
+export type SlotKind = "education" | "product" | "video";
 
 export type PostStatus =
   | "draft" // chạy thử, không đăng
@@ -28,6 +28,8 @@ export interface Post {
   claimIds: string[];
   imageUrl?: string;
   imageKind: "education" | "product";
+  videoId?: string; // id trong hàng chờ video (kind = "video")
+  driveFileId?: string;
   attempts: number; // số lần soạn/sửa
   complianceLog: string[]; // kết quả từng vòng kiểm
   fbPostId?: string;

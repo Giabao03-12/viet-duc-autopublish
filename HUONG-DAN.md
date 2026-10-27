@@ -71,3 +71,9 @@ Bản giả lập chỉ để thử quy trình – văn phong thật chỉ có k
 - Kiểm tra chính tả tiếng Việt dựa vào luật cơ bản + bước duyệt của Claude; không thay người đọc lại.
 - Claim `NANO-01`, `RICH-01..03` hiện ở trạng thái “chờ bạn duyệt lần cuối” theo `personal-brand-ai`; nhãn NANO còn mâu thuẫn hạn dùng (24 vs 36 tháng) – hệ thống không nêu hạn dùng.
 - Chưa thử với Meta/Claude thật (chưa có khoá); mọi thứ khác đã chạy được ở chế độ giả lập.
+
+## Kênh VIDEO – Page Sống Khỏe (06:15 · 11:30 · 19:30)
+- Hàng chờ nằm ở `content/videos.json` (mỗi video: file Drive, tiêu đề, caption). Thứ tự đăng = thứ tự **tải lên Drive** (`createdTime`). Mỗi khung giờ lấy video đầu hàng chờ; hết video thì bỏ qua (không đăng bù, không báo lỗi).
+- Caption đi qua cùng bộ luật kiểm duyệt (cấm chữa khỏi/cam kết/giá…), hệ thống tự gắn cảnh báo + hashtag. Caption vi phạm → video bị chặn và báo Telegram.
+- Điều kiện để Facebook tải được video: file Drive phải chia sẻ **"Bất kỳ ai có đường liên kết – Người xem"**. Chưa chia sẻ → Telegram báo lỗi và hệ thống tự thử lại ở khung giờ sau (video vẫn đứng đầu hàng chờ).
+- Thêm video mới: đưa file đã dựng vào thư mục Drive `Viet-Duc-Videos`, rồi nhờ Claude thêm vào hàng chờ (viết caption từ phụ đề, kiểm duyệt, commit). Nút "2e. Thử video" trên trang điều khiển kiểm tra link + caption mà không đăng.
