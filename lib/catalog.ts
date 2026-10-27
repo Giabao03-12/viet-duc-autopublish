@@ -49,12 +49,28 @@ export const PRODUCTS: Product[] = [
     ],
     audienceHint: "Người trung niên hay mệt mỏi, quan tâm tim mạch, thường đã uống thuốc kê đơn nên rất cần lời nhắc hỏi thầy thuốc.",
   },
+  {
+    id: "dha",
+    name: "DHA.EPA+SQ",
+    nameAliases: ["dha.epa+sq", "dha epa sq", "dha.epa + sq"],
+    ingredientCues: ["dha", "epa"],
+    image: "dha-epa.png",
+    xnqc: "892/2022/XNQC-ATTP",
+    mandatoryLines: [
+      "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.",
+      "Không dùng cho người kiêng kỵ, mẫn cảm với bất kỳ thành phần nào của sản phẩm.",
+      "Trong thời kỳ đang sử dụng các loại thuốc khác, đang điều trị bệnh, đang mang thai hoặc cho con bú, hãy hỏi ý kiến chuyên gia trước khi sử dụng.",
+    ],
+    audienceHint: "Người trưởng thành hay nhìn màn hình, thấy khô mắt, quan tâm sức khỏe đôi mắt ở tuổi trung niên (công dụng theo XNQC là về MẮT).",
+  },
 ];
 
 export const CLAIMS: Claim[] = [
   { id: "NANO-01", productId: "nano", text: "Bổ sung glucosamin và bột chiết xuất sụn cá mập hỗ trợ tốt cho khớp.", source: "XNQC 2016/2022/XNQC-ATTP" },
   { id: "RICH-01", productId: "rich", text: "Hỗ trợ bổ sung Coenzyme Q10 cho cơ thể.", source: "XNQC 1582/2024/XNQC-ATTP" },
   { id: "RICH-02", productId: "rich", text: "Hỗ trợ chống oxy hóa, hỗ trợ giảm mệt mỏi.", source: "XNQC 1582/2024/XNQC-ATTP" },
+  // CHỜ CHỦ PAGE DUYỆT: chép nguyên văn từ Giấy xác nhận nội dung quảng cáo số 892/2022/XNQC-ATTP (4. Giấy phép quảng cáo - DHA.EPA+SQ.pdf)
+  { id: "DHA-01", productId: "dha", text: "Hỗ trợ giúp cải thiện triệu chứng khô mắt, hỗ trợ giảm nguy cơ thoái hóa điểm vàng.", source: "XNQC 892/2022/XNQC-ATTP" },
   { id: "RICH-03", productId: "rich", text: "Hỗ trợ giảm nguy cơ xơ vữa động mạch, tốt cho tim mạch.", source: "XNQC 1582/2024/XNQC-ATTP" },
 ];
 
@@ -73,7 +89,7 @@ export const portraitConfirmed = () => env("PORTRAIT_CONFIRMED") !== "0";
 export const productById = (id: string) => PRODUCTS.find((p) => p.id === id);
 
 /** Tên các sản phẩm/thành phần ngoài hệ thống – không được xuất hiện (chưa có hồ sơ công bố). */
-export const FOREIGN_PRODUCT_CUES = ["nattokinase", "ellagic", "dha", "epa", "insuna", "fujina", "raydel", "policosanol"];
+export const FOREIGN_PRODUCT_CUES = ["nattokinase", "ellagic", "insuna", "fujina", "raydel", "policosanol"];
 
 export interface Topic {
   id: string;
@@ -157,4 +173,9 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
   { id: "rich-q-genuine", productId: "rich", group: "rich-genuine", label: "Mua RICH COENZYME Q10: kiểm tra gì trên hộp?", angle: "Tên sản phẩm, thông tin nhà sản xuất/nhập khẩu, hạn dùng; mua nơi rõ ràng; không nêu công dụng.", claimIds: [] },
   { id: "rich-q-who-not", productId: "rich", group: "rich-who", label: "Ai không nên tự dùng RICH?", angle: "Nhắc đúng cảnh báo: không dành cho trẻ vị thành niên, phụ nữ mang thai/cho con bú, người mắc bệnh; người đang dùng thuốc hỏi chuyên gia y tế.", claimIds: [] },
   { id: "rich-q-daily", productId: "rich", group: "rich-daily", label: "Một ngày nhiều năng lượng bắt đầu từ thói quen", angle: "Ngủ đủ, ăn uống, vận động; nhắc RICH như phần hỗ trợ, trích nguyên văn 'hỗ trợ bổ sung Coenzyme Q10 cho cơ thể'.", claimIds: ["RICH-01"] },
+  { id: "dha-q-claim", productId: "dha", group: "dha-claim", label: "Mắt khô, mắt mỏi: thói quen nhỏ mỗi ngày kèm một lựa chọn hỗ trợ", angle: "Nghỉ mắt khi nhìn màn hình, chớp mắt đều, đủ nước, ngủ đủ; nhắc DHA.EPA+SQ ở cuối bài, trích nguyên văn claim, nêu đúng đối tượng người trưởng thành.", claimIds: ["DHA-01"] },
+  { id: "dha-q-label", productId: "dha", group: "dha-label", label: "Đọc hộp DHA.EPA+SQ: ba mục cần xem", angle: "Tên sản phẩm, hạn dùng, lưu ý đối tượng không dùng/hỏi chuyên gia; không nêu công dụng.", claimIds: [] },
+  { id: "dha-q-who", productId: "dha", group: "dha-who", label: "Ai nên hỏi chuyên gia trước khi dùng DHA.EPA+SQ?", angle: "Người đang dùng thuốc, đang điều trị bệnh, đang mang thai hoặc cho con bú; người mẫn cảm với thành phần; nhắc đúng cảnh báo.", claimIds: [] },
+  { id: "dha-q-notmed", productId: "dha", group: "dha-notmed", label: "Giải đáp: DHA.EPA+SQ có thay thế thuốc không?", angle: "Trả lời rõ: không; thực phẩm bảo vệ sức khỏe không phải thuốc; mắt khô kéo dài, đau, nhìn mờ thì đi khám mắt.", claimIds: [] },
+  { id: "dha-q-screen", productId: "dha", group: "dha-screen", label: "Nhìn màn hình nhiều: 4 cách để mắt đỡ mỏi", angle: "Quy tắc nghỉ mắt (nhìn xa định kỳ), chỉnh độ sáng, chớp mắt, khám mắt định kỳ; nhắc DHA.EPA+SQ ở cuối bài, trích claim nguyên văn.", claimIds: ["DHA-01"] },
 ];

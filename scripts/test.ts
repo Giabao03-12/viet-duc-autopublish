@@ -171,6 +171,37 @@ async function main() {
     t("Bài 07:00 giờ VN = 00:00 UTC", e2.post?.publishAt === "2026-11-11T00:00:00.000Z", e2.post?.publishAt);
   }
 
+  // ── Sản phẩm DHA.EPA+SQ: chỉ vào luân phiên khi chủ page DUYỆT claim DHA-01 ──
+  {
+    const { pickProduct } = await import("../lib/pipeline");
+    process.env.APPROVED_CLAIMS = "NANO-01,RICH-01,RICH-02,RICH-03";
+    const ids1 = new Set<string>();
+    for (let d = 1; d <= 12; d++) ids1.add(pickProduct(`2026-12-${String(d).padStart(2, "0")}`).id);
+    t("Chưa duyệt DHA-01 -> DHA KHÔNG được chọn", !ids1.has("dha") && ids1.size === 2, [...ids1].join(","));
+    process.env.APPROVED_CLAIMS = "NANO-01,RICH-01,RICH-02,RICH-03,DHA-01";
+    const ids2 = new Set<string>();
+    for (let d = 1; d <= 12; d++) ids2.add(pickProduct(`2026-12-${String(d).padStart(2, "0")}`).id);
+    t("Đã duyệt DHA-01 -> 3 sản phẩm luân phiên", ids2.size === 3 && ids2.has("dha"), [...ids2].join(","));
+
+    useMemoryStore();
+    await saveSettings({ ...(await getSettings()), autoEnabled: true });
+    let found: Awaited<ReturnType<typeof prepareSlot>> | null = null;
+    for (let d = 1; d <= 9 && !found; d++) {
+      const day = `2026-12-${String(d).padStart(2, "0")}`;
+      if (pickProduct(day, 0).id !== "dha") continue;
+      found = await prepareSlot({ slot: "1800", now: new Date(`${day}T06:00:00Z`) });
+    }
+    t("Bài DHA có tên đúng + số XNQC 892/2022 + cảnh báo", !!found && found.status === "scheduled" && !!found.post && found.post.caption.includes("DHA.EPA+SQ") && found.post.caption.includes("892/2022/XNQC-ATTP") && found.post.caption.includes("Trong thời kỳ đang sử dụng các loại thuốc khác"), JSON.stringify([found?.status, found?.reason]).slice(0, 300));
+    if (found?.post && found.post.claimIds.length) t("Bài DHA nêu công dụng chỉ bằng claim nguyên văn DHA-01", found.post.claimIds.join() === "DHA-01" && found.post.caption.includes("Hỗ trợ giúp cải thiện triệu chứng khô mắt, hỗ trợ giảm nguy cơ thoái hóa điểm vàng."));
+
+    const edu = checkContent({ kind: "education", title: "Mắt khỏe", body: LONG + " Nhiều người bổ sung DHA mỗi ngày.", hashtags: ["#VietDucSongKhoe", "#SucKhoe"], approved: approvedClaims(), allowedClaimIds: [], recentCaptions: [] });
+    t("Bài giáo dục nhắc thành phần DHA -> chặn", !edu.pass);
+    const rich = productById("rich")!;
+    const cross = checkContent({ kind: "product", title: "RICH", body: `Chiều nay mình giải đáp. Với ${rich.name}, anh chị đọc kỹ nhãn trước khi dùng. Có người còn dùng thêm DHA và EPA, nhưng đó là chuyện khác. Người đang dùng thuốc hỏi chuyên gia y tế trước khi dùng. Anh chị còn thắc mắc gì, để lại bình luận nhé, mình sẽ giải đáp từng câu một cách cẩn thận và rõ ràng.`, hashtags: ["#VietDucSongKhoe", "#Rich"], product: rich, approved: approvedClaims(), allowedClaimIds: [], recentCaptions: [] });
+    t("Bài RICH nhắc thành phần sản phẩm khác (DHA/EPA) -> chặn", !cross.pass);
+    process.env.APPROVED_CLAIMS = "NANO-01,RICH-01,RICH-02,RICH-03";
+  }
+
   // ── Video Page Sống Khỏe: 06:15 / 11:30 / 19:30, theo thứ tự tải lên ──
   {
     const { setVideoQueueForTest, loadQueue } = await import("../lib/videos");

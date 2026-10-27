@@ -44,7 +44,11 @@ async function loadMemory(kind: string): Promise<Memory> {
 /** Sản phẩm luân phiên theo ngày; `offset` lệch theo kênh để 2 Page cùng ngày nói về 2 sản phẩm khác nhau. */
 export function pickProduct(date: string, offset = 0): Product {
   const dayIndex = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
-  return PRODUCTS[(dayIndex + offset) % PRODUCTS.length];
+  // Chỉ luân phiên sản phẩm có ít nhất 1 claim ĐÃ ĐƯỢC CHỦ PAGE DUYỆT (APPROVED_CLAIMS). Chưa duyệt claim nào -> dùng tất cả (bài không nêu công dụng).
+  const approvedIds = new Set(approvedClaims().map((c) => c.productId));
+  const eligible = PRODUCTS.filter((p) => approvedIds.has(p.id));
+  const pool = eligible.length ? eligible : PRODUCTS;
+  return pool[(dayIndex + offset) % pool.length];
 }
 
 export async function pickTopic(kind: "education" | "product", date: string, extraExclude: string[] = [], productOffset = 0): Promise<{ topic: Topic; claimIds: string[]; product?: Product; exhausted: boolean } | null> {

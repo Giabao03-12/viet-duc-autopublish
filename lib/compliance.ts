@@ -123,6 +123,7 @@ export function checkContent(inp: CheckInput): CheckResult {
   if (inp.kind === "education") {
     if (mentionsAnyProduct) issues.push("[scope] Bài giáo dục 06:00 không được nhắc tên sản phẩm");
     if (/\b(coenzyme|coenzym|glucosamin|sun ca map|q10)\b/.test(f)) issues.push("[scope] Bài giáo dục không được nhắc thành phần sản phẩm");
+    for (const prod of PRODUCTS) for (const cue of prod.ingredientCues) if (new RegExp(`\\b${fold(cue).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(f)) issues.push(`[scope] Bài giáo dục không được nhắc thành phần sản phẩm: ${cue}`);
     if (/\b(mua ngay|dat hang|dat mua|lien he mua|inbox de mua)\b/.test(f)) issues.push("[scope] Bài giáo dục không kêu gọi mua hàng");
   } else {
     const p = inp.product;
@@ -132,6 +133,7 @@ export function checkContent(inp: CheckInput): CheckResult {
       for (const other of PRODUCTS) {
         if (other.id === p.id) continue;
         if ([other.name, ...other.nameAliases].some((n) => f.includes(fold(n)))) issues.push(`[product] Nhắc sản phẩm khác (${other.name}) trong bài của ${p.name}`);
+        for (const cue of other.ingredientCues) if (new RegExp(`\\b${fold(cue).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(f)) issues.push(`[product] Nhắc thành phần của sản phẩm khác (${cue}) trong bài của ${p.name}`);
       }
       for (const cue of FOREIGN_PRODUCT_CUES) if (new RegExp(`\\b${cue}\\b`).test(f)) issues.push(`[product] Nhắc sản phẩm/thành phần ngoài hồ sơ: ${cue}`);
 

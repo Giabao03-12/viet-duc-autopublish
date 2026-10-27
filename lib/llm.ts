@@ -120,7 +120,7 @@ function mockDraft(ctx: DraftContext, fixed = false): Draft {
   const short = t.length > 48 ? t.slice(0, 48).trim() : t;
   // Bản giả lập: nội dung xoay quanh chủ đề (ít câu khuôn mẫu) để bộ chống trùng không bắt nhầm khi chạy thử.
   const angle = ctx.topic.angle;
-  const parts = angle.split(/[;,.]\s*/).filter(Boolean);
+  const parts = angle.split(/[;,]\s*|\.(?=\s|$)\s*/).filter(Boolean); // không cắt dấu chấm trong tên như "DHA.EPA+SQ"
   const bullets = parts.map((x, i) => `${i + 1}. ${x.charAt(0).toUpperCase()}${x.slice(1)}.`).join("\n");
   const body =
     ctx.kind === "education"
