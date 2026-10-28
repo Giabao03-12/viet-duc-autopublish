@@ -310,6 +310,8 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
     // Chọn video đầu hàng chờ có caption đạt kiểm duyệt; caption không đạt thì chặn video đó (kèm báo) rồi xét video kế tiếp
     let chosen: VideoEntry | null = null;
     let caption = "";
+    let chk: { ok: boolean; detail: string } = { ok: false, detail: "" };
+    let firstLinkFail: { v: VideoEntry; detail: string } | null = null;
     for (const v of queue) {
       const rule = checkContent({
         kind: "education", title: v.title, body: v.caption, hashtags: v.hashtags, approved: approvedClaims(), allowedClaimIds: [], recentCaptions: [],
@@ -322,9 +324,23 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
         await log("warn", "prepare", `[${slot}] Video ${v.id} bị chặn: ${rule.issues.join(" | ")}`);
         continue;
       }
+      // Video lỗi link (chưa chia sẻ / file đã xoá) KHÔNG được chặn cả hàng chờ: ghi nhận rồi thử video kế tiếp
+      const probe = await checkVideoUrl(driveDirectUrl(v.driveFileId));
+      if (!probe.ok) {
+        firstLinkFail ??= { v, detail: probe.detail };
+        const prev = await getVideoRec(v.id);
+        if (!dryRun) await setVideoState(v.id, { status: "retry", attempts: (prev && prev.status === "retry" ? prev.attempts : 0) + 1, reason: probe.detail, at: now() });
+        await log("warn", "prepare", `[${slot}] Video ${v.id} link không tải được (${probe.detail}) – thử video kế tiếp`);
+        continue;
+      }
+      chk = probe;
       chosen = v;
       caption = `${v.title}\n\n${v.caption}\n\n${buildFooter("education", undefined, BRAND.educationFooter)}\n\n${v.hashtags.join(" ")}`;
       break;
+    }
+    if (!chosen && firstLinkFail) {
+      const f = firstLinkFail;
+      return fail("failed", `Link video không tải được (${f.v.fileName}): ${f.detail}. Kiểm tra file Drive đã chia sẻ "bất kỳ ai có link" và còn tồn tại; các video khác trong hàng chờ cũng lỗi.`, { videoId: f.v.id, driveFileId: f.v.driveFileId, topicId: f.v.id, topicLabel: f.v.fileName, title: f.v.title });
     }
     if (!chosen) {
       if (!dryRun) await getStore().del(lockKey);
@@ -333,15 +349,6 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
 
     const fileUrl = driveDirectUrl(chosen.driveFileId);
     const common: Partial<Post> = { topicId: chosen.id, topicLabel: chosen.fileName, videoId: chosen.id, driveFileId: chosen.driveFileId, titles: [chosen.title], title: chosen.title, hashtags: chosen.hashtags, caption, attempts: 1, complianceLog: ["Caption video đạt bộ luật kiểm duyệt giáo dục"] };
-
-    const chk = await checkVideoUrl(fileUrl);
-    if (!chk.ok) {
-      const prev = await getVideoRec(chosen.id);
-      const attempts = (prev && prev.status === "retry" ? prev.attempts : 0) + 1;
-      // Lỗi link (thường do chưa chia sẻ Drive) KHÔNG chặn vĩnh viễn: giữ video ở đầu hàng chờ để lượt sau thử lại khi bạn chia sẻ xong
-      if (!dryRun) await setVideoState(chosen.id, { status: "retry", attempts, reason: chk.detail, at: now() });
-      return fail("failed", `Link video không tải được (${chosen.fileName}): ${chk.detail}. Kiểm tra file Drive đã chia sẻ "bất kỳ ai có link".`, common);
-    }
 
     if (dryRun) {
       const post: Post = { ...base, ...common, status: "draft" } as Post;
