@@ -413,6 +413,29 @@ export async function cancelScheduled(): Promise<number> {
 }
 
 // ───────────────────────── Watchdog: đối soát, token, cảnh báo ─────────────────────────
+/**
+ * Lấp lịch video: với mỗi khung video SẮP TỚI (trong 24h) chưa có lượt chuẩn bị, lấy video chưa lên lịch kế tiếp trong hàng chờ
+ * (đúng thứ tự tải lên) và hẹn giờ. Duyệt theo thứ tự thời gian nên video cũ nhất vào khung gần nhất. Khung đã có video thì bỏ qua.
+ */
+export async function fillVideoSlots(at: Date = new Date()): Promise<string[]> {
+  const out: string[] = [];
+  const settings = await getSettings();
+  if (!settings.autoEnabled) return ["Chế độ tự động đang TẮT"];
+  const slots = ALL_SLOTS.filter((s) => SLOTS[s].kind === "video" && channelConfigured(SLOTS[s].channel))
+    .map((s) => ({ s, ...nextSlotInstant(at, s) }))
+    .sort((a, b) => a.at.getTime() - b.at.getTime());
+  for (const { s, date, at: when } of slots) {
+    if (await getStore().get(`slot:${date}:${s}`)) { out.push(`${s} ${date}: đã có video`); continue; }
+    if ((when.getTime() - at.getTime()) / 60000 < MIN_LEAD_MIN) { out.push(`${s} ${date}: quá sát giờ`); continue; }
+    if (!(await pendingVideos()).length) { out.push("Hàng chờ video trống"); break; }
+    try {
+      const r = await prepareSlot({ slot: s, now: at });
+      out.push(`${s} ${date}: ${r.status}${r.reason ? " – " + r.reason : ""}`);
+    } catch (e) { out.push(`${s} ${date}: lỗi ${(e as Error).message}`); }
+  }
+  return out;
+}
+
 export async function watchdog(at: Date = new Date()) {
   const report: string[] = [];
   // 1) Token từng Page đã cấu hình
@@ -474,6 +497,9 @@ Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`); }
       }
     } catch (e) { report.push(`Lỗi đối soát ${p.fbPostId}: ${(e as Error).message}`); }
   }
+
+  // 2b) Tự lấp lịch video cho các khung sắp tới (phòng khi cron chuẩn bị không chạy/bị lỗi)
+  try { for (const l of await fillVideoSlots(at)) report.push(`Lấp lịch video: ${l}`); } catch (e) { report.push(`Lỗi lấp lịch video: ${(e as Error).message}`); }
 
   // 3) Phát hiện hệ thống bỏ lỡ khâu chuẩn bị: khung giờ sắp tới < 3h mà chưa có bài
   const settings = await getSettings();
