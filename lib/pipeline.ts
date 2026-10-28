@@ -364,7 +364,10 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
     }
 
     const picked = chosen;
-    const res = await meta.inChannel(ch, () => meta.scheduleVideo({ fileUrl, description: caption, title: picked.title, publishAt: at }));
+    const publicBase = env("PUBLIC_BASE_URL").replace(/\/$/, "");
+    const coverUrl = publicBase ? `${publicBase}/covers/${picked.id}.jpg` : undefined;
+    const res = await meta.inChannel(ch, () => meta.scheduleVideo({ fileUrl, description: caption, title: picked.title, publishAt: at, coverUrl }));
+    if (res.cover === "none") await log("warn", "prepare", `[${slot}] ${picked.id}: chưa gắn được ảnh bìa (thiếu public/covers/${picked.id}.jpg hoặc Facebook từ chối) – video dùng khung hình tự chọn`);
     const stt = await meta.inChannel(ch, () => meta.getVideoState(res.videoId));
     if (!stt.exists) return fail("failed", `Facebook nhận lệnh hẹn video nhưng không thấy video ${res.videoId}`, common);
 
@@ -417,6 +420,25 @@ export async function cancelScheduled(): Promise<number> {
     }
   }
   return n;
+}
+
+/** Huỷ MỌI video đã hẹn giờ (chưa đến giờ) rồi để fillVideoSlots xếp lại theo hàng chờ hiện tại. */
+export async function resetVideoSchedule(): Promise<string[]> {
+  const out: string[] = [];
+  const posts = await listPosts(60);
+  for (const p of posts) {
+    if (p.kind === "video" && p.status === "scheduled" && p.fbPostId && new Date(p.publishAt).getTime() > Date.now() + 5 * 60000) {
+      try {
+        const fid = p.fbPostId;
+        await meta.inChannel(p.channel, () => meta.deleteRemote(fid));
+        p.status = "cancelled"; await savePost(p);
+        await getStore().del(`slot:${p.date}:${p.slot}`);
+        if (p.videoId) await clearVideoState(p.videoId);
+        out.push(`Đã huỷ ${p.slot} ${p.date}: ${p.topicLabel}`);
+      } catch (e) { out.push(`KHÔNG huỷ được ${p.slot} ${p.date} (${p.fbPostId}): ${(e as Error).message}`); }
+    }
+  }
+  return out;
 }
 
 // ───────────────────────── Watchdog: đối soát, token, cảnh báo ─────────────────────────

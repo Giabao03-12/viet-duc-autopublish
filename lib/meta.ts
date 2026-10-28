@@ -152,17 +152,47 @@ export async function schedulePhoto(opts: { imageUrl: string; message: string; p
  * Hẹn giờ đăng VIDEO: Facebook tự tải `file_url` (link công khai) rồi đăng đúng giờ.
  * Trả về mã video; sau đó phải kiểm tra bằng getVideoState.
  */
-export async function scheduleVideo(opts: { fileUrl: string; description: string; title: string; publishAt: Date }): Promise<{ videoId: string }> {
+/** POST multipart (cần khi gửi kèm file ảnh bìa). */
+async function graphForm<T>(path: string, fields: Record<string, string | number | boolean>, file?: { name: string; field: string; bytes: Uint8Array; type: string }): Promise<T> {
+  const token = pageToken();
+  if (!token) throw new MetaError(undefined, undefined, `Thiếu ${CHANNELS[currentChannel()].tokenEnv}`);
+  const fd = new FormData();
+  for (const [k, v] of Object.entries({ ...fields, access_token: token })) fd.set(k, String(v));
+  if (file) fd.set(file.field, new Blob([file.bytes as BlobPart], { type: file.type }), file.name);
+  const r = await fetch(`${base()}${path}`, { method: "POST", body: fd });
+  const j = (await r.json()) as { error?: { message: string; code: number; error_subcode?: number } } & T;
+  if (!r.ok || j.error) throw new MetaError(j.error?.code, j.error?.error_subcode, j.error?.message ?? `HTTP ${r.status}`);
+  return j;
+}
+
+async function fetchCover(url?: string): Promise<Uint8Array | null> {
+  if (!url) return null;
+  try {
+    const r = await fetch(url);
+    if (!r.ok || !(r.headers.get("content-type") ?? "").startsWith("image/")) return null;
+    const b = new Uint8Array(await r.arrayBuffer());
+    return b.length > 1000 && b.length < 10_000_000 ? b : null;
+  } catch { return null; }
+}
+
+export async function scheduleVideo(opts: { fileUrl: string; description: string; title: string; publishAt: Date; coverUrl?: string }): Promise<{ videoId: string; cover: "thumb" | "thumbnails" | "none" }> {
   const ts = Math.floor(opts.publishAt.getTime() / 1000);
-  if (isMockMeta()) return { videoId: `MOCKVIDEO_${ts}` };
-  const j = await graph<{ id: string }>("POST", `/${pageId()}/videos`, {
-    file_url: opts.fileUrl,
-    description: opts.description,
-    title: opts.title.slice(0, 100),
-    published: false,
-    scheduled_publish_time: ts,
-  });
-  return { videoId: j.id };
+  if (isMockMeta()) return { videoId: `MOCKVIDEO_${ts}`, cover: opts.coverUrl ? "thumb" : "none" };
+  const fields = { file_url: opts.fileUrl, description: opts.description, title: opts.title.slice(0, 100), published: false, scheduled_publish_time: ts };
+  const cover = await fetchCover(opts.coverUrl);
+  if (cover) {
+    const file = { name: "cover.jpg", field: "thumb", bytes: cover, type: "image/jpeg" };
+    try {
+      const j = await graphForm<{ id: string }>(`/${pageId()}/videos`, fields, file);
+      return { videoId: j.id, cover: "thumb" };
+    } catch { /* thử lại không kèm bìa, rồi gắn bìa sau */ }
+  }
+  const j = await graph<{ id: string }>("POST", `/${pageId()}/videos`, fields);
+  if (cover) {
+    try { await graphForm(`/${j.id}/thumbnails`, { is_preferred: true }, { name: "cover.jpg", field: "source", bytes: cover, type: "image/jpeg" }); return { videoId: j.id, cover: "thumbnails" }; }
+    catch { /* bìa là phần phụ: video vẫn đã hẹn giờ */ }
+  }
+  return { videoId: j.id, cover: "none" };
 }
 
 export interface VideoState { exists: boolean; published: boolean; scheduledFor?: number; processing?: string; error?: string; permalink?: string }
