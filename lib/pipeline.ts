@@ -306,6 +306,7 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
     return { status, post: p, reason };
   };
 
+  let claimKey: string | null = null; // khoá giữ chỗ video đang được hẹn (chặn 2 lượt chạy song song cùng chọn 1 video)
   try {
     // Chọn video đầu hàng chờ có caption đạt kiểm duyệt; caption không đạt thì chặn video đó (kèm báo) rồi xét video kế tiếp
     let chosen: VideoEntry | null = null;
@@ -332,6 +333,10 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
         if (!dryRun) await setVideoState(v.id, { status: "retry", attempts: (prev && prev.status === "retry" ? prev.attempts : 0) + 1, reason: probe.detail, at: now() });
         await log("warn", "prepare", `[${slot}] Video ${v.id} link không tải được (${probe.detail}) – thử video kế tiếp`);
         continue;
+      }
+      if (!dryRun) {
+        if (!(await getStore().setnx(`vclaim:${v.id}`, slot, 900))) { await log("info", "prepare", `[${slot}] Video ${v.id} đang được lượt khác hẹn – chọn video kế tiếp`); continue; }
+        claimKey = `vclaim:${v.id}`;
       }
       chk = probe;
       chosen = v;
@@ -387,6 +392,8 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
     const err = e as Error;
     if (e instanceof meta.MetaError && e.isTokenError) await notify("error", "Token Facebook lỗi/hết hạn", `Meta trả lỗi ${e.code}: ${e.message}.`, `token-error:${ch}`);
     return fail("failed", `Lỗi: ${err.message}`);
+  } finally {
+    if (claimKey) await getStore().del(claimKey);
   }
 }
 
