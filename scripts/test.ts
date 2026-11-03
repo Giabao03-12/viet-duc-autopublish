@@ -215,13 +215,13 @@ async function main() {
 
     const D = new Date("2026-11-20T10:00:00Z"); // 17:00 VN
     const a = await prepareSlot({ slot: "1930", now: D });
-    t("Video 19:30 hẹn thành công, Page Sống Khỏe", a.status === "scheduled" && a.post?.kind === "video" && a.post.channel === "sk" && a.post.videoId === "v1", JSON.stringify([a.status, a.reason]));
+    t("Video 19:30 hẹn thành công, Page Sống Khỏe", a.status === "scheduled" && a.post?.kind === "video" && a.post.channel === "sk" && a.post.videoId === "v2", JSON.stringify([a.status, a.reason]));
     t("Giờ 19:30 VN = 12:30 UTC", a.post?.publishAt === "2026-11-20T12:30:00.000Z", a.post?.publishAt);
     t("Caption video có cảnh báo + hashtag do hệ thống gắn", !!a.post && a.post.caption.includes("không thay thế tư vấn y khoa") && a.post.caption.includes("#VietDucSongKhoe"));
     const dup = await prepareSlot({ slot: "1930", now: new Date(D.getTime() + 60000) });
     t("Video: chạy lại cùng khung -> chống trùng", dup.status === "duplicate");
     const b = await prepareSlot({ slot: "0615", now: new Date("2026-11-20T20:00:00Z") }); // 03:00 VN 21/11
-    t("Khung kế tiếp lấy video thứ hai (đúng thứ tự)", b.status === "scheduled" && b.post?.videoId === "v2" && b.post.publishAt === "2026-11-20T23:15:00.000Z", JSON.stringify([b.status, b.reason, b.post?.publishAt]));
+    t("Khung kế tiếp lấy video còn lại (không cần theo thứ tự)", b.status === "scheduled" && b.post?.videoId === "v1" && b.post.publishAt === "2026-11-20T23:15:00.000Z", JSON.stringify([b.status, b.reason, b.post?.publishAt]));
     const c = await prepareSlot({ slot: "1130", now: new Date("2026-11-21T01:00:00Z") });
     t("Hàng chờ hết -> bỏ qua, không lỗi, không đăng bù", c.status === "skipped" && /trống/.test(c.reason ?? ""), JSON.stringify([c.status, c.reason]));
     t("Hàng chờ trống không khoá khung giờ (video mới vào sẽ được nhận)", !(await (await import("../lib/store")).getStore().get("slot:2026-11-21:1130")));
@@ -229,7 +229,7 @@ async function main() {
     // caption vi phạm -> video bị chặn, không đăng; video hợp lệ kế tiếp được dùng
     useMemoryStore();
     await saveSettings({ ...(await getSettings()), autoEnabled: true });
-    setVideoQueueForTest([mkv(1, "2026-10-26T15:13:00Z", cap + " Sản phẩm này chữa khỏi đau khớp, cam kết hiệu quả."), mkv(2, "2026-10-26T17:17:00Z")]);
+    setVideoQueueForTest([mkv(1, "2026-10-26T17:17:00Z", cap + " Sản phẩm này chữa khỏi đau khớp, cam kết hiệu quả."), mkv(2, "2026-10-26T15:13:00Z")]);
     const d = await prepareSlot({ slot: "1930", now: D });
     t("Caption vi phạm bị chặn; video hợp lệ kế tiếp được đăng", d.status === "scheduled" && d.post?.videoId === "v2", JSON.stringify([d.status, d.reason]));
     const { getVideoState } = await import("../lib/videos");

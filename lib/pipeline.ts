@@ -313,7 +313,8 @@ async function prepareVideoSlot(a: VideoSlotArgs): Promise<PrepareResult> {
     let caption = "";
     let chk: { ok: boolean; detail: string } = { ok: false, detail: "" };
     let firstLinkFail: { v: VideoEntry; detail: string } | null = null;
-    for (const v of queue) {
+    // Không cần theo thứ tự: khung trống thì lấy video MỚI NHẤT chưa lên lịch; video lỗi link/bị chặn thì bỏ qua, thử video khác
+    for (const v of [...queue].reverse()) {
       const rule = checkContent({
         kind: "education", title: v.title, body: v.caption, hashtags: v.hashtags, approved: approvedClaims(), allowedClaimIds: [], recentCaptions: [],
       });
