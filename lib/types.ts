@@ -26,7 +26,9 @@ export interface Post {
   caption: string;
   hashtags: string[];
   claimIds: string[];
-  imageUrl?: string;
+  imageUrl?: string; // ảnh đầu (thẻ chữ khi bài nhiều ảnh)
+  photos?: string[]; // tên 2 ảnh thật (assets/photos) đặt dưới thẻ chữ; thiếu = bài 1 ảnh
+  extraImageUrls?: string[]; // URL công khai của các ảnh phụ
   imageKind: "education" | "product";
   videoId?: string; // id trong hàng chờ video (kind = "video")
   driveFileId?: string;

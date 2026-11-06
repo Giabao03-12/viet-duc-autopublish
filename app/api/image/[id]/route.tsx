@@ -16,7 +16,7 @@ const dataUri = async (file: string) => `data:image/${/\.jpe?g$/i.test(file) ? "
  * Ảnh sản phẩm và chân dung là ẢNH THẬT, chỉ đặt vào khung – không vẽ lại, không chỉnh khuôn mặt hay bao bì.
  * Không dùng AI sinh ảnh cho người/sản phẩm.
  */
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: raw } = await ctx.params;
   const post = await getPost(raw.replace(/\.png$/, ""));
   if (!post) return new Response("not found", { status: 404 });
@@ -24,6 +24,42 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const [bold, regular] = await Promise.all([fs.readFile(A("fonts", "BeVietnamPro-Bold.ttf")), fs.readFile(A("fonts", "BeVietnamPro-Regular.ttf"))]);
   const product = post.productId ? productById(post.productId) : undefined;
   const isProduct = post.kind === "product" && !!product;
+
+  // Bài nhiều ảnh: ?part=card (thẻ chữ lớn) · ?part=a|b (ảnh thật sản phẩm cắt vuông, không chỉnh sửa)
+  const part = new URL(req.url).searchParams.get("part");
+  const fonts = [
+    { name: "BeVietnam", data: bold, weight: 700 as const, style: "normal" as const },
+    { name: "BeVietnam", data: regular, weight: 400 as const, style: "normal" as const },
+  ];
+  if ((part === "a" || part === "b") && post.photos?.length === 2) {
+    const src = await dataUri(A("photos", post.photos[part === "a" ? 0 : 1]));
+    return new ImageResponse(
+      (
+        <div style={{ width: 1080, height: 1080, display: "flex" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" style={{ width: 1080, height: 1080, objectFit: "cover" }} />
+        </div>
+      ),
+      { width: 1080, height: 1080, headers: { "Cache-Control": "public, max-age=3600" } },
+    );
+  }
+  if (part === "card") {
+    const t = post.title;
+    const size = t.length > 60 ? 64 : t.length > 40 ? 76 : 90;
+    return new ImageResponse(
+      (
+        <div style={{ width: 1080, height: 760, display: "flex", flexDirection: "column", fontFamily: "BeVietnam", background: "linear-gradient(160deg,#FFD400,#FFB800)" }}>
+          <div style={{ display: "flex", background: "#C8102E", color: "#FFFFFF", fontSize: 32, fontWeight: 700, padding: "24px 70px", letterSpacing: 4 }}>{BRAND.handle}</div>
+          <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, justifyContent: "center", padding: "0 70px" }}>
+            <div style={{ display: "flex", fontSize: size, lineHeight: 1.2, fontWeight: 700, color: "#111111" }}>{t}</div>
+            <div style={{ display: "flex", width: 180, height: 12, background: "#C8102E", marginTop: 32 }} />
+          </div>
+          <div style={{ display: "flex", background: "#111111", color: "#FFFFFF", fontSize: 24, padding: "22px 70px", lineHeight: 1.35 }}>{isProduct ? BRAND.productDisclaimer : BRAND.educationFooter}</div>
+        </div>
+      ),
+      { width: 1080, height: 760, fonts, headers: { "Cache-Control": "public, max-age=3600" } },
+    );
+  }
 
   let photo: string | null = null;
   const ownerShot = isProduct && !!product!.ownerPhoto && portraitConfirmed();

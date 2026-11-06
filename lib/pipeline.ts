@@ -5,6 +5,7 @@ import { buildFooter, checkContent } from "./compliance";
 import { reviewDraft, reviseDraft, writeDraft, type Draft, type DraftContext } from "./llm";
 import * as meta from "./meta";
 import { notify } from "./notify";
+import { pickPhotos } from "./photos";
 import { log } from "./log";
 import { getStore } from "./store";
 import type { Post, Settings, SlotId } from "./types";
@@ -211,9 +212,15 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     if (!composed.ok) return fail("skipped", `Không đạt kiểm duyệt sau ${composed.attempts} lần soạn/sửa. ${composed.log.at(-1)}`, common);
 
     const publicBase = env("PUBLIC_BASE_URL").replace(/\/$/, "");
+    // Bài sản phẩm: thẻ chữ lớn + 2 ảnh thật của sản phẩm (kiểu nhiều ảnh trên Facebook); thiếu ảnh -> bài 1 ảnh như cũ
+    const dayNo = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
+    const photos = kind === "product" ? pickPhotos(pick.product?.id, dayNo + SLOTS[slot].hour) ?? undefined : undefined;
+    const imgBase = publicBase ? `${publicBase}/api/image/${postId}.png` : undefined;
     const post: Post = {
       ...base, ...common, caption: composed.fullCaption, claimIds: composed.usedClaimIds,
-      imageUrl: publicBase ? `${publicBase}/api/image/${postId}.png` : undefined,
+      imageUrl: imgBase && photos ? `${imgBase}?part=card` : imgBase,
+      photos,
+      extraImageUrls: imgBase && photos ? [`${imgBase}?part=a`, `${imgBase}?part=b`] : undefined,
     } as Post;
 
     if (dryRun) {
@@ -228,9 +235,11 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     await savePost(post);
 
     if (!post.imageUrl) return fail("failed", "Thiếu PUBLIC_BASE_URL – Facebook không tải được ảnh", { ...common, caption: composed.fullCaption });
-    const img = env("SKIP_IMAGE_CHECK") === "1" ? ({ ok: true, status: 200, headers: new Headers({ "content-type": "image/png" }) } as Response) : await fetch(post.imageUrl, { cache: "no-store" }).catch(() => null);
-    if (!img || !img.ok || !(img.headers.get("content-type") ?? "").includes("image")) {
-      return fail("failed", `Ảnh không tạo được/không truy cập công khai (${img?.status ?? "no response"})`, { ...common, caption: composed.fullCaption, imageUrl: post.imageUrl });
+    for (const u of [post.imageUrl, ...(post.extraImageUrls ?? [])]) {
+      const img = env("SKIP_IMAGE_CHECK") === "1" ? ({ ok: true, status: 200, headers: new Headers({ "content-type": "image/png" }) } as Response) : await fetch(u, { cache: "no-store" }).catch(() => null);
+      if (!img || !img.ok || !(img.headers.get("content-type") ?? "").includes("image")) {
+        return fail("failed", `Ảnh không tạo được/không truy cập công khai (${img?.status ?? "no response"}): ${u}`, { ...common, caption: composed.fullCaption, imageUrl: post.imageUrl });
+      }
     }
 
     // Kiểm tra lại trạng thái ngay trước khi hẹn: người dùng có thể vừa TẮT.
@@ -243,7 +252,8 @@ Sửa biến trên Vercel rồi Redeploy.`, `token-mismatch:${ch}`);
       return fail("failed", `Token không khớp Page: ${match.detail}`, { ...common, caption: composed.fullCaption, imageUrl: post.imageUrl });
     }
     const imageUrl = post.imageUrl;
-    const res = await meta.inChannel(ch, () => meta.schedulePhoto({ imageUrl, message: post.caption, publishAt: at }));
+    const extraImageUrls = post.extraImageUrls;
+    const res = await meta.inChannel(ch, () => meta.schedulePhoto({ imageUrl, extraImageUrls, message: post.caption, publishAt: at }));
     post.fbPostId = res.fbPostId;
     post.status = "scheduled";
     post.error = undefined;

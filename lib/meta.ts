@@ -108,7 +108,7 @@ async function findScheduledByMessage(message: string): Promise<ScheduledItem | 
  * Cách 1 (chuẩn): tải ảnh ẩn -> tạo bài /feed hẹn giờ có gắn ảnh. Cách 2 (dự phòng): /photos có scheduled_publish_time.
  * Cả hai không xác minh được -> ném lỗi để báo ngay (không đợi tới giờ đăng mới biết).
  */
-export async function schedulePhoto(opts: { imageUrl: string; message: string; publishAt: Date }): Promise<PublishResult> {
+export async function schedulePhoto(opts: { imageUrl: string; extraImageUrls?: string[]; message: string; publishAt: Date }): Promise<PublishResult> {
   const ts = Math.floor(opts.publishAt.getTime() / 1000);
   if (isMockMeta()) return { fbPostId: `MOCK_${pageId() || "page"}_${ts}`, photoId: `MOCKPHOTO_${ts}`, method: "mock" };
   const errors: string[] = [];
@@ -116,9 +116,14 @@ export async function schedulePhoto(opts: { imageUrl: string; message: string; p
   // Cách 1: ảnh ẩn + bài hẹn giờ có gắn ảnh
   try {
     const photo = await graph<{ id: string }>("POST", `/${pageId()}/photos`, { url: opts.imageUrl, published: false, temporary: true });
+    const media = [{ media_fbid: photo.id }];
+    for (const u of opts.extraImageUrls ?? []) {
+      const p = await graph<{ id: string }>("POST", `/${pageId()}/photos`, { url: u, published: false, temporary: true });
+      media.push({ media_fbid: p.id });
+    }
     const post = await graph<{ id: string }>("POST", `/${pageId()}/feed`, {
       message: opts.message,
-      attached_media: JSON.stringify([{ media_fbid: photo.id }]),
+      attached_media: JSON.stringify(media),
       published: false,
       scheduled_publish_time: ts,
     });
