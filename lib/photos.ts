@@ -8,6 +8,11 @@ export const PRODUCT_PHOTOS: Record<string, string[]> = {
   dha: ["dha-1.jpg", "dha-2.jpg", "dha-3.jpg"],
 };
 
+/** Bài kiến thức: ảnh sản phẩm gần chủ đề nhất (chỉ làm ảnh minh hoạ; bài vẫn không nêu tên/công dụng sản phẩm trong chữ). */
+const GROUP_PRODUCT: Record<string, string> = { khop: "nano", vandong: "nano", tim: "rich", nangluong: "rich", dinhduong: "rich", ngu: "dha" };
+export const productForGroup = (group: string | undefined, seed: number): string =>
+  (group && GROUP_PRODUCT[group]) || Object.keys(PRODUCT_PHOTOS)[((seed % 3) + 3) % 3];
+
 /** Chọn 2 ảnh khác nhau, xoay vòng theo seed (ngày + khung giờ) để các bài liên tiếp không dùng cùng cặp ảnh. */
 export function pickPhotos(productId: string | undefined, seed: number): string[] | null {
   const list = productId ? PRODUCT_PHOTOS[productId] : undefined;

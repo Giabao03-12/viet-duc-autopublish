@@ -5,7 +5,7 @@ import { buildFooter, checkContent } from "./compliance";
 import { reviewDraft, reviseDraft, writeDraft, type Draft, type DraftContext } from "./llm";
 import * as meta from "./meta";
 import { notify } from "./notify";
-import { pickPhotos } from "./photos";
+import { pickPhotos, productForGroup } from "./photos";
 import { log } from "./log";
 import { getStore } from "./store";
 import type { Post, Settings, SlotId } from "./types";
@@ -212,9 +212,9 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     if (!composed.ok) return fail("skipped", `Không đạt kiểm duyệt sau ${composed.attempts} lần soạn/sửa. ${composed.log.at(-1)}`, common);
 
     const publicBase = env("PUBLIC_BASE_URL").replace(/\/$/, "");
-    // Bài sản phẩm: thẻ chữ lớn + 2 ảnh thật của sản phẩm (kiểu nhiều ảnh trên Facebook); thiếu ảnh -> bài 1 ảnh như cũ
+    // Mọi bài ảnh: thẻ chữ lớn + 2 ảnh thật của sản phẩm (kiểu nhiều ảnh trên Facebook); thiếu ảnh -> bài 1 ảnh như cũ
     const dayNo = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
-    const photos = kind === "product" ? pickPhotos(pick.product?.id, dayNo + SLOTS[slot].hour) ?? undefined : undefined;
+    const photos = pickPhotos(kind === "product" ? pick.product?.id : productForGroup(pick.topic.group, dayNo), dayNo + SLOTS[slot].hour) ?? undefined;
     const imgBase = publicBase ? `${publicBase}/api/image/${postId}.png` : undefined;
     const post: Post = {
       ...base, ...common, caption: composed.fullCaption, claimIds: composed.usedClaimIds,
