@@ -6,7 +6,7 @@ export const PRODUCT_PHOTOS: Record<string, string[]> = {
   nano: ["sun-1.jpg", "sun-2.jpg", "sun-3.jpg"],
   rich: ["rich-1.jpg", "rich-2.jpg", "rich-3.jpg"],
   dha: ["dha-1.jpg", "dha-2.jpg", "dha-3.jpg"],
-  natto: ["natto-1.jpg", "natto-2.jpg"],
+  natto: ["natto-1.jpg", "natto-2.jpg", "natto-3.jpg"],
   raydel: ["raydel-1.jpg", "raydel-2.jpg", "raydel-3.jpg"],
 };
 
