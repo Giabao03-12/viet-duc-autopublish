@@ -32,7 +32,7 @@ const HARD_RULES: Rule[] = [
   { id: "replace-med", raw: true, re: /(?<!không có tác dụng )(?<!không )(?<!và không )thay thế thuốc|(?<!thầy )(?<!thày )thay thuốc|bỏ thuốc|ngưng thuốc|ngừng thuốc|ngưng điều trị|ngừng điều trị|giảm liều|tự ý (bỏ|ngưng|ngừng)|(?<!thuốc )kê đơn/, why: "Gợi ý thay/ngưng thuốc" },
   { id: "evidence", re: /\b(chung nhan|chung minh|nghien cuu|lam sang|bang sang che|cong trinh|khoa hoc cho thay|giai thuong|hang dau|so 1|tot nhat|hieu qua nhat|duoc bo y te|bac si khuyen|chuyen gia khuyen|chuyen gia cong nhan)\b/, why: "Tự nêu chứng nhận/bằng chứng khoa học/đảm bảo bên thứ ba" },
   { id: "stat", re: /\d+\s?%|\d+\s?(nguoi|khach|benh nhan)\s+(da|deu|khong)/, why: "Số liệu/thống kê không có nguồn" },
-  { id: "price", re: /\d[\d.,]*\s?(d|dong|vnd|k|nghin|ngan|trieu|tr)\b|\b(giam gia|khuyen mai|uu dai|mua \d+ tang|tang kem|gia (ban|le|goc|re|tot|chi)|freeship|chot don|inbox bao gia)\b/, why: "Không được tự nêu/đổi giá, khuyến mãi" },
+  { id: "price", re: /\d{1,3}([.,]\d{3})+|\d[\d.,]*\s?(₫|(d|dong|vnd|k|nghin|ngan|trieu|tr)\b)|\b(giam gia|khuyen mai|uu dai|mua \d+ tang|tang kem|tiet kiem|combo|gia (ban|le|goc|re|tot|chi)|freeship|chot don|inbox bao gia)\b/, why: "Không được tự nêu/đổi giá, khuyến mãi" },
   { id: "testimonial", re: /\b(khach (hang )?(da )?(khoi|het|noi rang)|chi [a-z]+ (da )?(khoi|het)|bac [a-z]+ (da )?(khoi|het)|truoc va sau)\b/, why: "Lời chứng thực chưa có sự đồng ý được ghi nhận (CUSTOMER_REPORT)" },
   { id: "fear", re: /\b(liet nua nguoi|nam liet|co the tu vong|chet nguoi|dang so)\b/, why: "Dùng nỗi sợ bệnh tật để bán hàng (trái giá trị thương hiệu)" },
 ];
@@ -93,8 +93,11 @@ export function checkContent(inp: CheckInput): CheckResult {
 
   // 1) Quy tắc cứng
   const rawText = stripped;
+  // Giá niêm yết 1 hộp của chính sản phẩm (đúng nguyên văn) được phép trong bài bán hàng; mọi con số giá khác vẫn bị chặn.
+  const lp = inp.kind === "product" ? inp.product?.listPrice : undefined;
+  const priceText = lp ? f.split(fold(lp).replace(/[^0-9.]/g, "")).join(" ") : f; // bỏ đúng con số giá niêm yết (vd 2.890.000), giữ nguyên mọi số khác
   for (const r of HARD_RULES) {
-    const m = (r.raw ? rawText : f).match(r.re);
+    const m = (r.raw ? rawText : r.id === "price" ? priceText : f).match(r.re);
     if (m) issues.push(`[${r.id}] ${r.why} — gặp: "${m[0].trim()}"`);
   }
 

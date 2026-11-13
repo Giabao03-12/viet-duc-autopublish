@@ -17,6 +17,7 @@ export interface Product {
   xnqc: string; // số Giấy xác nhận nội dung quảng cáo
   mandatoryLines: string[]; // câu cảnh báo bắt buộc, do CODE gắn vào cuối bài
   audienceHint: string;
+  listPrice?: string; // giá niêm yết 1 hộp (bảng giá niêm yết 2026, do chủ page cung cấp) – chỉ bài bán hàng được nêu, đúng nguyên văn
 }
 
 export const PRODUCTS: Product[] = [
@@ -28,6 +29,7 @@ export const PRODUCTS: Product[] = [
     image: "sun.png",
     ownerPhoto: "viet-duc-nano.jpg", // chủ page gửi "Đây hình thật tôi" (20/10/2026)
     xnqc: "2016/2022/XNQC-ATTP",
+    listPrice: "1.990.000 ₫",
     mandatoryLines: [
       "Thực phẩm này không phải là thuốc, không có tác dụng thay thế thuốc chữa bệnh.",
       "Hạn chế sử dụng đối với những người bị dị ứng, người đang mang thai hoặc người đang điều trị bệnh.",
@@ -42,6 +44,7 @@ export const PRODUCTS: Product[] = [
     ingredientCues: ["coenzyme q10", "coenzym q10", "coq10"],
     image: "rich.png",
     xnqc: "1582/2024/XNQC-ATTP",
+    listPrice: "2.890.000 ₫",
     mandatoryLines: [
       "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.",
       "Người đang dùng thuốc, đang mắc bệnh tham khảo ý kiến chuyên gia y tế trước khi dùng.",
@@ -56,6 +59,7 @@ export const PRODUCTS: Product[] = [
     ingredientCues: ["dha", "epa"],
     image: "dha-epa.png",
     xnqc: "892/2022/XNQC-ATTP",
+    listPrice: "3.290.000 ₫",
     mandatoryLines: [
       "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.",
       "Không dùng cho người kiêng kỵ, mẫn cảm với bất kỳ thành phần nào của sản phẩm.",

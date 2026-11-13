@@ -31,7 +31,7 @@ QUY TẮC CỨNG (vi phạm là bài bị loại):
 1. Không cam kết/ám chỉ chữa khỏi bệnh; không dùng "chữa", "đặc trị", "khỏi hẳn", "100%", "cam kết".
 2. Không nói thay thế thuốc, ngưng thuốc, chẩn đoán, kê đơn, điều trị.
 3. Không tự tạo chứng nhận, nghiên cứu, số liệu, phần trăm, lời bác sĩ/khách hàng.
-4. Không nêu giá, khuyến mãi, ưu đãi.
+4. Không nêu giá, khuyến mãi, ưu đãi (trừ giá niêm yết một hộp khi đề bài yêu cầu rõ).
 5. Không đưa công dụng nào ngoài các CLAIM ĐƯỢC PHÉP (nếu có). Khi nhắc công dụng sản phẩm, trích NGUYÊN VĂN claim, không diễn đạt lại, không thêm.
 6. Không viết phần cảnh báo/"không phải là thuốc"/số xác nhận quảng cáo – hệ thống tự gắn ở cuối bài.
 7. Tiếng Việt chuẩn, đủ dấu, đúng chính tả.
@@ -51,7 +51,7 @@ function userPrompt(ctx: DraftContext) {
     }
   }
   if (ctx.cta) {
-    lines.push("KIỂU BÀI: BÁN HÀNG – KÊU GỌI HÀNH ĐỘNG. Mở bằng nỗi bận tâm cụ thể của người đọc, giới thiệu sản phẩm bằng tên (nêu công dụng chỉ khi có CLAIM ĐƯỢC PHÉP, trích nguyên văn), rồi KẾT BẰNG 1–2 câu kêu gọi hành động rõ ràng, thúc đẩy ngay: mời anh chị NHẮN TIN cho Page Việt Đức (inbox) để được tư vấn cách dùng phù hợp với mình, hoặc gọi/nhắn Zalo số 0908 475 146 (ghi đúng nguyên văn số này), hoặc bình luận 'TƯ VẤN' để được liên hệ. Không nêu giá, khuyến mãi, không hô 'chốt đơn', không hứa hiệu quả, không nói thay thế thuốc.");
+    lines.push(`KIỂU BÀI: BÁN HÀNG – KÊU GỌI HÀNH ĐỘNG. Mở bằng nỗi bận tâm cụ thể của người đọc, giới thiệu sản phẩm bằng tên (nêu công dụng chỉ khi có CLAIM ĐƯỢC PHÉP, trích nguyên văn), rồi KẾT BẰNG 1–2 câu kêu gọi hành động rõ ràng, thúc đẩy ngay: mời anh chị NHẮN TIN cho Page Việt Đức (inbox) để được tư vấn cách dùng phù hợp với mình, hoặc gọi/nhắn Zalo số 0908 475 146 (ghi đúng nguyên văn số này), hoặc bình luận 'TƯ VẤN' để được liên hệ. Nêu GIÁ NIÊM YẾT một hộp đúng nguyên văn "${ctx.product?.listPrice ?? ""}/hộp" (đúng một lần, không đổi số); tuyệt đối không nêu combo, giảm giá, quà tặng, tiết kiệm, so sánh giá hay ưu đãi nào khác; không hô 'chốt đơn', không hứa hiệu quả, không nói thay thế thuốc.`);
   }
   lines.push(`Yêu cầu JSON: {"audience": "1–2 câu phân tích khách hàng mục tiêu và nỗi bận tâm", "titles": ["tiêu đề 1","tiêu đề 2","tiêu đề 3"], "chosenIndex": 0, "chosenReason": "vì sao chọn", "body": "thân bài 300–1100 ký tự, xuống dòng bằng \\n", "hashtags": ["#VietDucSongKhoe", "#..."]}
 - 3 tiêu đề phải khác hẳn nhau, mỗi tiêu đề ≤ 70 ký tự.
