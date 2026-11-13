@@ -192,13 +192,14 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
   };
 
   try {
-    const pick = await pickTopic(kind, date, [], CHANNELS[ch].productOffset);
+    // 07:00 lệch thêm 1 so với 19:00 để 2 bài bán hàng cùng ngày của Sống Khỏe nói về 2 sản phẩm khác nhau
+    const pick = await pickTopic(kind, date, [], CHANNELS[ch].productOffset + (slot === "0700" ? 1 : 0));
     if (!pick) return fail("skipped", "Không còn chủ đề hợp lệ (có thể do claim chưa được duyệt). Cần bổ sung chủ đề hoặc duyệt claim trong APPROVED_CLAIMS.");
     if (pick.exhausted && !dryRun) await notify("warn", "Kho chủ đề đã dùng hết một vòng", `Nhóm ${kind}: hệ thống quay vòng chủ đề. Hãy bổ sung chủ đề mới trong lib/catalog.ts để tránh lặp lại.`, `exhausted:${kind}`);
 
     const claims = approvedClaims().filter((c) => pick.claimIds.includes(c.id));
     const ctx: DraftContext = {
-      kind, topic: pick.topic, product: pick.product, claims,
+      kind, topic: pick.topic, product: pick.product, claims, cta: ch === "sk" && kind === "product",
       dateLabel: `${date.split("-").reverse().join("/")} (${SLOTS[slot].label})`,
     };
     const mem = await loadMemory(kind);

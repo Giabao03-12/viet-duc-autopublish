@@ -15,8 +15,9 @@ export const channelConfigured = (ch: ChannelId) => !!(env(CHANNELS[ch].pageIdEn
 export const SLOTS: Record<SlotId, { hour: number; minute: number; kind: SlotKind; label: string; channel: ChannelId }> = {
   "0600": { hour: 6, minute: 0, kind: "education", channel: "ktd", label: "06:00 Khoẻ Trẻ Đẹp – Giáo dục sức khỏe" },
   "1800": { hour: 18, minute: 0, kind: "product", channel: "ktd", label: "18:00 Khoẻ Trẻ Đẹp – Kiến thức sản phẩm / giải đáp" },
-  "0700": { hour: 7, minute: 0, kind: "education", channel: "sk", label: "07:00 Sống Khỏe – Giáo dục sức khỏe" },
-  "1900": { hour: 19, minute: 0, kind: "product", channel: "sk", label: "19:00 Sống Khỏe – Kiến thức sản phẩm / giải đáp" },
+  // Page Sống Khỏe: cả 2 bài ảnh là bài bán hàng có lời kêu gọi hành động (nhắn tin Page để được tư vấn)
+  "0700": { hour: 7, minute: 0, kind: "product", channel: "sk", label: "07:00 Sống Khỏe – Bài bán hàng / kêu gọi hành động" },
+  "1900": { hour: 19, minute: 0, kind: "product", channel: "sk", label: "19:00 Sống Khỏe – Bài bán hàng / kêu gọi hành động" },
   // Video đã dựng (hàng chờ content/videos.json, theo thứ tự tải lên Drive) – Page Sống Khỏe
   "0615": { hour: 6, minute: 15, kind: "video", channel: "sk", label: "06:15 Sống Khỏe – Video" },
   "1130": { hour: 11, minute: 30, kind: "video", channel: "sk", label: "11:30 Sống Khỏe – Video" },

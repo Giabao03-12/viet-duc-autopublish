@@ -18,6 +18,7 @@ export interface DraftContext {
   product?: Product;
   claims: Claim[]; // claim ĐƯỢC PHÉP dùng cho chủ đề này (đã duyệt)
   dateLabel: string;
+  cta?: boolean; // bài bán hàng: kết bằng lời kêu gọi hành động rõ ràng
 }
 
 const SYSTEM = `Bạn là copywriter của fanpage "Việt Đức – Sống Khỏe" (người đại diện: anh Việt Đức), viết cho người Việt trung niên – cao tuổi.
@@ -48,6 +49,9 @@ function userPrompt(ctx: DraftContext) {
     } else {
       lines.push("Chủ đề này KHÔNG được nêu bất kỳ công dụng nào của sản phẩm. Chỉ nói về cách đọc nhãn, đối tượng cần hỏi thầy thuốc, lối sống. Câu nào nhắc sản phẩm thì không dùng các từ 'giúp', 'hỗ trợ', 'cải thiện', 'giảm', 'tăng', 'bảo vệ'.");
     }
+  }
+  if (ctx.cta) {
+    lines.push("KIỂU BÀI: BÁN HÀNG – KÊU GỌI HÀNH ĐỘNG. Mở bằng nỗi bận tâm cụ thể của người đọc, giới thiệu sản phẩm bằng tên (nêu công dụng chỉ khi có CLAIM ĐƯỢC PHÉP, trích nguyên văn), rồi KẾT BẰNG 1–2 câu kêu gọi hành động rõ ràng, thúc đẩy ngay: mời anh chị NHẮN TIN cho Page Việt Đức (inbox) để được tư vấn cách dùng phù hợp với mình, hoặc gọi/nhắn Zalo số 0908 475 146 (ghi đúng nguyên văn số này), hoặc bình luận 'TƯ VẤN' để được liên hệ. Không nêu giá, khuyến mãi, không hô 'chốt đơn', không hứa hiệu quả, không nói thay thế thuốc.");
   }
   lines.push(`Yêu cầu JSON: {"audience": "1–2 câu phân tích khách hàng mục tiêu và nỗi bận tâm", "titles": ["tiêu đề 1","tiêu đề 2","tiêu đề 3"], "chosenIndex": 0, "chosenReason": "vì sao chọn", "body": "thân bài 300–1100 ký tự, xuống dòng bằng \\n", "hashtags": ["#VietDucSongKhoe", "#..."]}
 - 3 tiêu đề phải khác hẳn nhau, mỗi tiêu đề ≤ 70 ký tự.
