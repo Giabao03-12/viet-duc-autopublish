@@ -67,6 +67,38 @@ export const PRODUCTS: Product[] = [
     ],
     audienceHint: "Người trưởng thành hay nhìn màn hình, thấy khô mắt, quan tâm sức khỏe đôi mắt ở tuổi trung niên (công dụng theo XNQC là về MẮT).",
   },
+  {
+    id: "natto",
+    name: "NANO NATTOKINASE PREMIUM",
+    nameAliases: ["nano nattokinase premium", "nattokinase premium"],
+    ingredientCues: ["nattokinase"],
+    image: "natto.png",
+    xnqc: "1158/2022/XNQC-ATTP",
+    listPrice: "2.290.000 ₫",
+    mandatoryLines: [
+      "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.",
+      "Không dùng cho người mẫn cảm, kiêng kỵ với bất kỳ thành phần nào của sản phẩm.",
+      "Hạn chế sử dụng đối với những người bị dị ứng, người đang mang thai hoặc người đang điều trị bệnh.",
+      "Nếu bạn không cảm thấy khỏe sau khi sử dụng, vui lòng ngừng sử dụng.",
+    ],
+    audienceHint: "Người trưởng thành trung niên – cao tuổi quan tâm tuần hoàn máu, thường đã dùng thuốc nên rất cần lời nhắc hỏi thầy thuốc trước khi dùng.",
+  },
+  {
+    id: "raydel",
+    name: "RAYDEL Policosanol 10",
+    nameAliases: ["raydel policosanol 10", "raydel policosanol", "policosanol 10"],
+    ingredientCues: ["policosanol"],
+    image: "raydel.png",
+    xnqc: "23/2026/XNQC-ATTP",
+    listPrice: "1.650.000 ₫",
+    mandatoryLines: [
+      "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.",
+      "Không sử dụng sản phẩm cho người mẫn cảm, kiêng kỵ với bất kỳ thành phần nào của sản phẩm.",
+      "Không khuyến khích sử dụng cho phụ nữ mang thai và cho con bú.",
+      "Nếu có triệu chứng liên quan đến việc sử dụng sản phẩm và không giảm sau một thời gian, nên tìm sự hỗ trợ và tư vấn từ chuyên gia y tế.",
+    ],
+    audienceHint: "Người trưởng thành trung niên quan tâm chỉ số mỡ máu khi đi khám định kỳ, cần thông tin rõ ràng, không hứa hẹn quá đà.",
+  },
 ];
 
 export const CLAIMS: Claim[] = [
@@ -75,6 +107,9 @@ export const CLAIMS: Claim[] = [
   { id: "RICH-02", productId: "rich", text: "Hỗ trợ chống oxy hóa, hỗ trợ giảm mệt mỏi.", source: "XNQC 1582/2024/XNQC-ATTP" },
   // CHỜ CHỦ PAGE DUYỆT: chép nguyên văn từ Giấy xác nhận nội dung quảng cáo số 892/2022/XNQC-ATTP (4. Giấy phép quảng cáo - DHA.EPA+SQ.pdf)
   { id: "DHA-01", productId: "dha", text: "Hỗ trợ giúp cải thiện triệu chứng khô mắt, hỗ trợ giảm nguy cơ thoái hóa điểm vàng.", source: "XNQC 892/2022/XNQC-ATTP" },
+  { id: "NATTO-01", productId: "natto", text: "Hỗ trợ tan cục máu đông, hỗ trợ giảm nguy cơ hình thành huyết khối (cục máu đông).", source: "XNQC 1158/2022/XNQC-ATTP" },
+  // Số XNQC Raydel đọc từ bản scan: "23 /2026/XNQC-ATTP" (14/08/2026, cấp cho Cty CP Hasu No Hana) - cần chủ page kiểm tra lại số đầy đủ
+  { id: "RAYDEL-01", productId: "raydel", text: "Hỗ trợ cải thiện chỉ số Cholesterol, lipid máu.", source: "XNQC 23/2026/XNQC-ATTP (nội dung quảng cáo đính kèm)" },
   { id: "RICH-03", productId: "rich", text: "Hỗ trợ giảm nguy cơ xơ vữa động mạch, tốt cho tim mạch.", source: "XNQC 1582/2024/XNQC-ATTP" },
 ];
 
@@ -93,7 +128,7 @@ export const portraitConfirmed = () => env("PORTRAIT_CONFIRMED") !== "0";
 export const productById = (id: string) => PRODUCTS.find((p) => p.id === id);
 
 /** Tên các sản phẩm/thành phần ngoài hệ thống – không được xuất hiện (chưa có hồ sơ công bố). */
-export const FOREIGN_PRODUCT_CUES = ["nattokinase", "ellagic", "insuna", "fujina", "raydel", "policosanol"];
+export const FOREIGN_PRODUCT_CUES = ["ellagic", "insuna", "fujina"];
 
 export interface Topic {
   id: string;
@@ -182,4 +217,16 @@ export const PRODUCT_TOPICS: ProductTopic[] = [
   { id: "dha-q-who", productId: "dha", group: "dha-who", label: "Ai nên hỏi chuyên gia trước khi dùng DHA.EPA+SQ?", angle: "Người đang dùng thuốc, đang điều trị bệnh, đang mang thai hoặc cho con bú; người mẫn cảm với thành phần; nhắc đúng cảnh báo.", claimIds: [] },
   { id: "dha-q-notmed", productId: "dha", group: "dha-notmed", label: "Giải đáp: DHA.EPA+SQ có thay thế thuốc không?", angle: "Trả lời rõ: không; thực phẩm bảo vệ sức khỏe không phải thuốc; mắt khô kéo dài, đau, nhìn mờ thì đi khám mắt.", claimIds: [] },
   { id: "dha-q-screen", productId: "dha", group: "dha-screen", label: "Nhìn màn hình nhiều: 4 cách để mắt đỡ mỏi", angle: "Quy tắc nghỉ mắt (nhìn xa định kỳ), chỉnh độ sáng, chớp mắt, khám mắt định kỳ; nhắc DHA.EPA+SQ ở cuối bài, trích claim nguyên văn.", claimIds: ["DHA-01"] },
+  { id: "natto-q-claim", productId: "natto", group: "natto-claim", label: "Hồ sơ NANO NATTOKINASE PREMIUM ghi công dụng gì?", angle: "Trích đúng câu công dụng đã được xác nhận, giải thích 'hỗ trợ' nghĩa là gì, nhắc không thay thuốc, ai đang dùng thuốc hỏi thầy thuốc trước.", claimIds: ["NATTO-01"] },
+  { id: "natto-q-label", productId: "natto", group: "natto-label", label: "Đọc hộp NANO NATTOKINASE PREMIUM: ba mục cần xem", angle: "Tên sản phẩm, hạn dùng, hướng dẫn dùng 2 viên mỗi ngày và các lưu ý trên hộp; không nêu công dụng.", claimIds: [] },
+  { id: "natto-q-who", productId: "natto", group: "natto-who", label: "Ai nên hỏi thầy thuốc trước khi dùng NANO NATTOKINASE PREMIUM?", angle: "Người dị ứng, đang mang thai, đang điều trị bệnh, đang dùng thuốc; nhắc đúng các câu lưu ý bắt buộc; mang hộp và danh sách thuốc đi khám.", claimIds: [] },
+  { id: "natto-q-notmed", productId: "natto", group: "natto-notmed", label: "Giải đáp: NANO NATTOKINASE PREMIUM có thay thế thuốc không?", angle: "Trả lời rõ: không; thực phẩm bảo vệ sức khỏe không phải thuốc; không tự ngưng hay đổi thuốc đang dùng.", claimIds: [] },
+  { id: "natto-q-habit", productId: "natto", group: "natto-habit", label: "Thói quen nhỏ mỗi ngày cho tuần hoàn máu, kèm một lựa chọn hỗ trợ", angle: "Vận động nhẹ, uống đủ nước, không ngồi lâu; nhắc NANO NATTOKINASE PREMIUM như một lựa chọn hỗ trợ, trích nguyên văn claim.", claimIds: ["NATTO-01"] },
+  { id: "natto-q-genuine", productId: "natto", group: "natto-genuine", label: "Mua NANO NATTOKINASE PREMIUM: kiểm tra gì để đúng hàng thật?", angle: "Đọc tên đầy đủ trên hộp, nhãn phụ tiếng Việt, thông tin nhà sản xuất/nhập khẩu, số công bố; mua nơi rõ ràng; không nêu công dụng.", claimIds: [] },
+  { id: "raydel-q-claim", productId: "raydel", group: "raydel-claim", label: "Hồ sơ RAYDEL Policosanol 10 ghi công dụng gì?", angle: "Trích đúng câu công dụng đã được xác nhận, giải thích 'hỗ trợ' nghĩa là gì, nhắc đi khám và xét nghiệm định kỳ, không thay thuốc.", claimIds: ["RAYDEL-01"] },
+  { id: "raydel-q-label", productId: "raydel", group: "raydel-label", label: "Đọc hộp RAYDEL Policosanol 10: ba mục cần xem", angle: "Tên sản phẩm, hạn dùng, cách dùng 1 viên mỗi ngày, đối tượng người trưởng thành, lưu ý trên hộp; không nêu công dụng.", claimIds: [] },
+  { id: "raydel-q-who", productId: "raydel", group: "raydel-who", label: "Ai nên hỏi chuyên gia trước khi dùng RAYDEL Policosanol 10?", angle: "Người mẫn cảm thành phần, phụ nữ mang thai và cho con bú không khuyến khích dùng; người đang dùng thuốc hỏi chuyên gia; nhắc đúng cảnh báo.", claimIds: [] },
+  { id: "raydel-q-notmed", productId: "raydel", group: "raydel-notmed", label: "Giải đáp: RAYDEL Policosanol 10 có thay thế thuốc không?", angle: "Trả lời rõ: không; thực phẩm bảo vệ sức khỏe không phải thuốc; không tự ngưng thuốc mỡ máu đang dùng.", claimIds: [] },
+  { id: "raydel-q-checkup", productId: "raydel", group: "raydel-checkup", label: "Đi khám định kỳ: nhìn chỉ số mỡ máu thế nào cho đúng?", angle: "Xét nghiệm định kỳ, ăn uống, vận động; nhắc RAYDEL Policosanol 10 như một lựa chọn hỗ trợ, trích nguyên văn claim; mọi thay đổi hỏi bác sĩ.", claimIds: ["RAYDEL-01"] },
+  { id: "raydel-q-genuine", productId: "raydel", group: "raydel-genuine", label: "Mua RAYDEL Policosanol 10: kiểm tra gì để đúng hàng thật?", angle: "Đọc tên sản phẩm, nhà nhập khẩu và nhà phân phối ghi trên hộp, số công bố, nhãn phụ tiếng Việt; không nêu công dụng.", claimIds: [] },
 ];
