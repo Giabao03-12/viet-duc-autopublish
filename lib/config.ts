@@ -19,9 +19,13 @@ export const SLOTS: Record<SlotId, { hour: number; minute: number; kind: SlotKin
   "0700": { hour: 7, minute: 0, kind: "product", channel: "sk", label: "07:00 Sống Khỏe – Bài bán hàng / kêu gọi hành động" },
   "1900": { hour: 19, minute: 0, kind: "product", channel: "sk", label: "19:00 Sống Khỏe – Bài bán hàng / kêu gọi hành động" },
   // Video đã dựng (hàng chờ content/videos.json, theo thứ tự tải lên Drive) – Page Sống Khỏe
+  // 6 khung/ngày theo thói quen xem của người trung niên – cao tuổi ở Việt Nam: trước giờ làm, nghỉ trưa, chiều tan ca, tối sau bữa cơm.
   "0615": { hour: 6, minute: 15, kind: "video", channel: "sk", label: "06:15 Sống Khỏe – Video" },
+  "0915": { hour: 9, minute: 15, kind: "video", channel: "sk", label: "09:15 Sống Khỏe – Video" },
   "1130": { hour: 11, minute: 30, kind: "video", channel: "sk", label: "11:30 Sống Khỏe – Video" },
+  "1730": { hour: 17, minute: 30, kind: "video", channel: "sk", label: "17:30 Sống Khỏe – Video" },
   "1930": { hour: 19, minute: 30, kind: "video", channel: "sk", label: "19:30 Sống Khỏe – Video" },
+  "2115": { hour: 21, minute: 15, kind: "video", channel: "sk", label: "21:15 Sống Khỏe – Video" },
 };
 export const ALL_SLOTS = Object.keys(SLOTS) as SlotId[];
 

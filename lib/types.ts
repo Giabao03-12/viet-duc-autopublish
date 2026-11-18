@@ -1,4 +1,4 @@
-export type SlotId = "0600" | "1800" | "0700" | "1900" | "0615" | "1130" | "1930";
+export type SlotId = "0600" | "1800" | "0700" | "1900" | "0615" | "1130" | "1930" | "0915" | "1730" | "2115";
 export type SlotKind = "education" | "product" | "video";
 
 export type PostStatus =

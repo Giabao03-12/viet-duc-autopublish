@@ -217,6 +217,13 @@ async function main() {
     const a = await prepareSlot({ slot: "1930", now: D });
     t("Video 19:30 hẹn thành công, Page Sống Khỏe", a.status === "scheduled" && a.post?.kind === "video" && a.post.channel === "sk" && a.post.videoId === "v2", JSON.stringify([a.status, a.reason]));
     t("Giờ 19:30 VN = 12:30 UTC", a.post?.publishAt === "2026-11-20T12:30:00.000Z", a.post?.publishAt);
+    {
+      const { SLOTS, ALL_SLOTS } = await import("../lib/config");
+      const vs = ALL_SLOTS.filter((x) => SLOTS[x].kind === "video").map((x) => `${String(SLOTS[x].hour).padStart(2, "0")}:${String(SLOTS[x].minute).padStart(2, "0")}`).sort();
+      t("Page Sống Khỏe có 6 khung video/ngày đúng giờ", vs.join(",") === "06:15,09:15,11:30,17:30,19:30,21:15", vs.join(","));
+      const ids = ALL_SLOTS.map((x) => `${SLOTS[x].hour}:${SLOTS[x].minute}`);
+      t("Không có 2 khung trùng giờ", new Set(ids).size === ids.length);
+    }
     t("Caption video có cảnh báo + hashtag do hệ thống gắn", !!a.post && a.post.caption.includes("không thay thế tư vấn y khoa") && a.post.caption.includes("#VietDucSongKhoe"));
     const dup = await prepareSlot({ slot: "1930", now: new Date(D.getTime() + 60000) });
     t("Video: chạy lại cùng khung -> chống trùng", dup.status === "duplicate");
