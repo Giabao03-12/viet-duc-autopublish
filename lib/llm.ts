@@ -108,7 +108,7 @@ export async function reviewDraft(ctx: DraftContext, title: string, body: string
   if (isMockLLM()) return { pass: true, issues: [] };
   const sys = `Bạn là biên tập viên kiểm duyệt nội dung quảng cáo thực phẩm bảo vệ sức khỏe tại Việt Nam. Kiểm tra bản nháp theo 4 mục: (1) lỗi chính tả/ngữ pháp tiếng Việt; (2) thông tin sản phẩm có khớp hồ sơ được cung cấp không; (3) có công dụng/cam kết/số liệu/chứng nhận nào NGOÀI hồ sơ không; (4) có nguy cơ vi phạm quy định quảng cáo TPBVSK không (hứa chữa bệnh, thay thế thuốc, lời chứng thực...). Khắt khe. Trả về DUY NHẤT JSON {"pass": boolean, "issues": ["..."]}.`;
   const facts = ctx.product
-    ? `Hồ sơ: sản phẩm ${ctx.product.name}. Claim được phép: ${ctx.claims.map((c) => `"${c.text}"`).join("; ") || "(không có – không được nêu công dụng)"}.`
+    ? `Hồ sơ: sản phẩm ${ctx.product.name}. Claim được phép: ${ctx.claims.map((c) => `"${c.text}"`).join("; ") || "(không có – không được nêu công dụng)"}${ctx.cta && ctx.product?.listPrice ? ` Giá niêm yết một hộp của nhà phân phối (số liệu HỢP LỆ, nằm trong hồ sơ, được phép nêu đúng một lần): "${ctx.product.listPrice}/hộp". Số điện thoại tư vấn hợp lệ: 0908 475 146. Bài bán hàng được phép có lời kêu gọi nhắn tin/gọi tư vấn; KHÔNG được có giá khác, combo, giảm giá, quà tặng.` : ""}`
     : "Bài giáo dục: không được nhắc sản phẩm, không nêu công dụng sản phẩm.";
   // Phần cuối bài do hệ thống gắn (cảnh báo bắt buộc + số XNQC) phải được đưa vào, nếu không AI sẽ báo "thiếu cảnh báo" sai.
   const tail = footer ? `\n\nPHẦN CUỐI BÀI (hệ thống tự gắn và SẼ ĐĂNG KÈM; gồm các câu cảnh báo bắt buộc và số xác nhận nội dung quảng cáo – coi như bài ĐÃ CÓ các nội dung này):\n${footer}` : "";
