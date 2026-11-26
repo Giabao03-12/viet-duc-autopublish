@@ -53,7 +53,11 @@ function userPrompt(ctx: DraftContext) {
   if (ctx.cta) {
     lines.push(`KIỂU BÀI: BÁN HÀNG – KÊU GỌI HÀNH ĐỘNG. Mở bằng nỗi bận tâm cụ thể của người đọc, giới thiệu sản phẩm bằng tên (nêu công dụng chỉ khi có CLAIM ĐƯỢC PHÉP, trích nguyên văn), rồi KẾT BẰNG 1–2 câu kêu gọi hành động rõ ràng, thúc đẩy ngay: mời anh chị NHẮN TIN cho Page Việt Đức (inbox) để được tư vấn cách dùng phù hợp với mình, hoặc gọi/nhắn Zalo số 0908 475 146 (ghi đúng nguyên văn số này), hoặc bình luận 'TƯ VẤN' để được liên hệ. Nêu GIÁ NIÊM YẾT một hộp đúng nguyên văn "${ctx.product?.listPrice ?? ""}/hộp" (đúng một lần, không đổi số); tuyệt đối không nêu combo, giảm giá, quà tặng, tiết kiệm, so sánh giá hay ưu đãi nào khác; không hô 'chốt đơn', không hứa hiệu quả, không nói thay thế thuốc.`);
   }
-  lines.push(`Yêu cầu JSON: {"audience": "1–2 câu phân tích khách hàng mục tiêu và nỗi bận tâm", "titles": ["tiêu đề 1","tiêu đề 2","tiêu đề 3"], "chosenIndex": 0, "chosenReason": "vì sao chọn", "body": "thân bài 300–1100 ký tự, xuống dòng bằng \\n", "hashtags": ["#VietDucSongKhoe", "#..."]}
+  if (ctx.cta) {
+    // Văn phong chủ Page yêu cầu: "tả đúng cảm giác đời thường → Vì sao? → giải thích dễ hiểu → mời hành động"
+    lines.push(`VĂN PHONG KỂ CHUYỆN ĐỜI THƯỜNG (như người thật nói với người quen): (1) mở bằng 1–2 câu tả đúng cảm giác hằng ngày của người đọc, hợp với chủ đề (ví dụ: ban ngày uể oải, đêm ngủ chưa sâu); (2) xuống dòng, hỏi riêng một dòng "Vì sao nên để ý?"; (3) giải thích ngắn, dễ hiểu bằng thói quen sinh hoạt, rồi mới giới thiệu sản phẩm kèm claim nguyên văn; (4) một câu kết ấm áp rồi tới lời mời liên hệ. KHÔNG giải thích cơ chế trong cơ thể (ty thể, tế bào, tim, mạch máu, não, gan, thận), KHÔNG nói sản phẩm làm ngủ ngon, phục hồi, tỉnh táo hay tăng hiệu suất, KHÔNG gợi ý dùng sản phẩm thay cho đi khám; mệt kéo dài thì khuyên đi khám. Không dùng chuỗi dấu "!!!".`);
+  }
+  lines.push(`Yêu cầu JSON:{"audience": "1–2 câu phân tích khách hàng mục tiêu và nỗi bận tâm", "titles": ["tiêu đề 1","tiêu đề 2","tiêu đề 3"], "chosenIndex": 0, "chosenReason": "vì sao chọn", "body": "thân bài 300–1100 ký tự, xuống dòng bằng \\n", "hashtags": ["#VietDucSongKhoe", "#..."]}
 - 3 tiêu đề phải khác hẳn nhau, mỗi tiêu đề ≤ 70 ký tự.
 - Thân bài: mở bằng 1 câu hook, 3–5 ý ngắn, kết bằng lời mời hành động nhẹ nhàng. 2–5 hashtag, không dấu cách trong hashtag.`);
   return lines.join("\n\n");
