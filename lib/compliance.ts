@@ -185,5 +185,6 @@ export function checkContent(inp: CheckInput): CheckResult {
 /** Phần cuối bài do HỆ THỐNG gắn (không để AI tự viết). */
 export function buildFooter(kind: SlotKind, product: Product | undefined, brandFooter: string): string {
   if (kind === "education") return brandFooter;
-  return [...(product?.mandatoryLines ?? []), product ? `Số xác nhận nội dung quảng cáo: ${product.xnqc}.` : ""].filter(Boolean).join("\n");
+  // Không in dòng số xác nhận quảng cáo (chủ page chọn, 27/11/2026); số XNQC vẫn lưu trong hồ sơ sản phẩm.
+  return (product?.mandatoryLines ?? []).join("\n");
 }

@@ -116,7 +116,7 @@ async function main() {
   res = await prepareSlot({ slot: "1800", now: T });
   t("Bật -> hẹn giờ thành công", res.status === "scheduled" && !!res.post?.fbPostId && res.post.publishAt === "2026-10-20T11:00:00.000Z", JSON.stringify(res).slice(0, 300));
   t("Bài 18:00 có đúng tên sản phẩm + cảnh báo bắt buộc", !!res.post && res.post.caption.includes("không phải là thuốc") && /NANO Premium SHARK CARTILAGE|RICH COENZYME Q10/.test(res.post.caption), res.post?.caption.slice(-300));
-  t("Bài 18:00 có số xác nhận quảng cáo", !!res.post && /XNQC-ATTP/.test(res.post.caption));
+  t("Bài 18:00 không in dòng số xác nhận quảng cáo", !!res.post && !/XNQC-ATTP/.test(res.post.caption));
   t("Có 3 tiêu đề + 1 tiêu đề chọn", res.post?.titles.length === 3 && !!res.post.title);
   const dup = await prepareSlot({ slot: "1800", now: new Date(T.getTime() + 60000) });
   t("Chạy lại cùng khung giờ -> chống trùng", dup.status === "duplicate");
@@ -191,7 +191,7 @@ async function main() {
       if (pickProduct(day, 0).id !== "dha") continue;
       found = await prepareSlot({ slot: "1800", now: new Date(`${day}T06:00:00Z`) });
     }
-    t("Bài DHA có tên đúng + số XNQC 892/2022 + cảnh báo", !!found && found.status === "scheduled" && !!found.post && found.post.caption.includes("DHA.EPA+SQ") && found.post.caption.includes("892/2022/XNQC-ATTP") && found.post.caption.includes("Trong thời kỳ đang sử dụng các loại thuốc khác"), JSON.stringify([found?.status, found?.reason]).slice(0, 300));
+    t("Bài DHA có tên đúng + cảnh báo, không in số XNQC", !!found && found.status === "scheduled" && !!found.post && found.post.caption.includes("DHA.EPA+SQ") && !found.post.caption.includes("XNQC-ATTP") && found.post.caption.includes("Trong thời kỳ đang sử dụng các loại thuốc khác"), JSON.stringify([found?.status, found?.reason]).slice(0, 300));
     if (found?.post && found.post.claimIds.length) t("Bài DHA nêu công dụng chỉ bằng claim nguyên văn DHA-01", found.post.claimIds.join() === "DHA-01" && found.post.caption.includes("Hỗ trợ giúp cải thiện triệu chứng khô mắt, hỗ trợ giảm nguy cơ thoái hóa điểm vàng."));
 
     const edu = checkContent({ kind: "education", title: "Mắt khỏe", body: LONG + " Nhiều người bổ sung DHA mỗi ngày.", hashtags: ["#VietDucSongKhoe", "#SucKhoe"], approved: approvedClaims(), allowedClaimIds: [], recentCaptions: [] });
