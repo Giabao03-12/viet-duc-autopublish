@@ -46,8 +46,7 @@ export const PRODUCTS: Product[] = [
     xnqc: "1582/2024/XNQC-ATTP",
     listPrice: "2.890.000 ₫",
     mandatoryLines: [
-      // Chủ page chọn bản rút gọn (27/11/2026): một câu nhắc thân thiện + câu khuyến cáo bắt buộc.
-      "Anh chị đang dùng thuốc kê đơn thì nhớ hỏi thầy thuốc trước khi dùng nhé.",
+      // Chủ page chọn bản rút gọn (27/11/2026): chỉ giữ câu khuyến cáo bắt buộc.
       "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.",
     ],
     audienceHint: "Người trung niên hay mệt mỏi, quan tâm tim mạch, thường đã uống thuốc kê đơn nên rất cần lời nhắc hỏi thầy thuốc.",

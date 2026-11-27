@@ -53,6 +53,9 @@ function userPrompt(ctx: DraftContext) {
   if (ctx.cta) {
     lines.push(`KIỂU BÀI: BÁN HÀNG – KÊU GỌI HÀNH ĐỘNG. Mở bằng nỗi bận tâm cụ thể của người đọc, giới thiệu sản phẩm bằng tên (nêu công dụng chỉ khi có CLAIM ĐƯỢC PHÉP, trích nguyên văn), rồi KẾT BẰNG 1–2 câu kêu gọi hành động rõ ràng, thúc đẩy ngay: mời anh chị NHẮN TIN cho Page Việt Đức (inbox) để được tư vấn cách dùng phù hợp với mình, hoặc gọi/nhắn Zalo số 0908 475 146 (ghi đúng nguyên văn số này), hoặc bình luận 'TƯ VẤN' để được liên hệ. Nêu GIÁ NIÊM YẾT một hộp đúng nguyên văn "${ctx.product?.listPrice ?? ""}/hộp" (đúng một lần, không đổi số); tuyệt đối không nêu combo, giảm giá, quà tặng, tiết kiệm, so sánh giá hay ưu đãi nào khác; không hô 'chốt đơn', không hứa hiệu quả, không nói thay thế thuốc.`);
   }
+  if (ctx.product) {
+    lines.push("Thân bài KHÔNG tự thêm câu nhắc người đang dùng thuốc/đang mắc bệnh hỏi thầy thuốc, câu 'không nhằm mục đích chẩn đoán, điều trị, phòng ngừa bệnh', hay số xác nhận quảng cáo – trừ khi chính chủ đề bài hỏi về việc đang dùng thuốc hoặc ai không nên dùng.");
+  }
   if (ctx.cta) {
     // Văn phong chủ Page yêu cầu: "tả đúng cảm giác đời thường → Vì sao? → giải thích dễ hiểu → mời hành động"
     lines.push(`VĂN PHONG KỂ CHUYỆN ĐỜI THƯỜNG (như người thật nói với người quen): (1) mở bằng 1–2 câu tả đúng cảm giác hằng ngày của người đọc, hợp với chủ đề (ví dụ: ban ngày uể oải, đêm ngủ chưa sâu); (2) xuống dòng, hỏi riêng một dòng "Vì sao nên để ý?"; (3) giải thích ngắn, dễ hiểu bằng thói quen sinh hoạt, rồi mới giới thiệu sản phẩm kèm claim nguyên văn; (4) một câu kết ấm áp rồi tới lời mời liên hệ. KHÔNG giải thích cơ chế trong cơ thể (ty thể, tế bào, tim, mạch máu, não, gan, thận), KHÔNG nói sản phẩm làm ngủ ngon, phục hồi, tỉnh táo hay tăng hiệu suất, KHÔNG gợi ý dùng sản phẩm thay cho đi khám; mệt kéo dài thì khuyên đi khám. Không dùng chuỗi dấu "!!!".`);
@@ -115,7 +118,7 @@ export async function reviewDraft(ctx: DraftContext, title: string, body: string
     ? `Hồ sơ: sản phẩm ${ctx.product.name}. Claim được phép: ${ctx.claims.map((c) => `"${c.text}"`).join("; ") || "(không có – không được nêu công dụng)"}${ctx.cta && ctx.product?.listPrice ? ` Giá niêm yết một hộp của nhà phân phối (số liệu HỢP LỆ, nằm trong hồ sơ, được phép nêu đúng một lần): "${ctx.product.listPrice}/hộp". Số điện thoại tư vấn hợp lệ: 0908 475 146. Bài bán hàng được phép có lời kêu gọi nhắn tin/gọi tư vấn; KHÔNG được có giá khác, combo, giảm giá, quà tặng.` : ""}`
     : "Bài giáo dục: không được nhắc sản phẩm, không nêu công dụng sản phẩm.";
   // Phần cuối bài do hệ thống gắn (cảnh báo bắt buộc + số XNQC) phải được đưa vào, nếu không AI sẽ báo "thiếu cảnh báo" sai.
-  const tail = footer ? `\n\nPHẦN CUỐI BÀI (hệ thống tự gắn và SẼ ĐĂNG KÈM; gồm các câu cảnh báo bắt buộc – coi như bài ĐÃ CÓ các nội dung này; chủ page chủ ý không in số xác nhận quảng cáo, KHÔNG tính đó là lỗi):\n${footer}` : "";
+  const tail = footer ? `\n\nPHẦN CUỐI BÀI (hệ thống tự gắn và SẼ ĐĂNG KÈM; gồm các câu cảnh báo bắt buộc – coi như bài ĐÃ CÓ các nội dung này; chủ page chủ ý không in số xác nhận quảng cáo và không bắt buộc thêm câu nhắc hỏi thầy thuốc, KHÔNG tính việc thiếu hai thứ đó là lỗi):\n${footer}` : "";
   const out = extractJson<{ pass: boolean; issues: string[] }>(await ask(sys, `${facts}\n\nTiêu đề: ${title}\n\nThân bài:\n${body}${tail}`, 10000));
   return { pass: !!out.pass, issues: (out.issues ?? []).map(String) };
 }
