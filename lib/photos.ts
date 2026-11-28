@@ -10,15 +10,31 @@ export const PRODUCT_PHOTOS: Record<string, string[]> = {
   raydel: ["raydel-1.jpg", "raydel-2.jpg", "raydel-3.jpg"],
 };
 
+/**
+ * Poster do chủ page gửi (thư mục ANH-DANG-FB, 28/11/2026), đã đối chiếu: chữ trên ảnh chỉ nêu công dụng theo XNQC,
+ * có số hotline và câu "không phải là thuốc". CHỈ dùng cho bài sản phẩm – không đưa vào bài giáo dục.
+ */
+export const PRODUCT_POSTERS: Record<string, string> = {
+  nano: "poster-nano.jpg",
+  rich: "poster-rich.jpg",
+  dha: "poster-dha.jpg",
+  natto: "poster-natto.jpg",
+  raydel: "poster-raydel.jpg",
+};
+
 /** Bài kiến thức: ảnh sản phẩm gần chủ đề nhất (chỉ làm ảnh minh hoạ; bài vẫn không nêu tên/công dụng sản phẩm trong chữ). */
 const GROUP_PRODUCT: Record<string, string> = { khop: "nano", vandong: "nano", tim: "rich", nangluong: "rich", dinhduong: "rich", ngu: "dha" };
 export const productForGroup = (group: string | undefined, seed: number): string =>
   (group && GROUP_PRODUCT[group]) || ["nano", "rich", "dha"][((seed % 3) + 3) % 3];
 
-/** Chọn 2 ảnh khác nhau, xoay vòng theo seed (ngày + khung giờ) để các bài liên tiếp không dùng cùng cặp ảnh. */
-export function pickPhotos(productId: string | undefined, seed: number): string[] | null {
+/**
+ * Chọn 2 ảnh khác nhau, xoay vòng theo seed (ngày + khung giờ) để các bài liên tiếp không dùng cùng cặp ảnh.
+ * withPoster (bài sản phẩm): ảnh đầu là poster của sản phẩm, ảnh sau là ảnh thật xoay vòng.
+ */
+export function pickPhotos(productId: string | undefined, seed: number, withPoster = false): string[] | null {
   const list = productId ? PRODUCT_PHOTOS[productId] : undefined;
   if (!list || list.length < 2) return null;
   const i = ((seed % list.length) + list.length) % list.length;
-  return [list[i], list[(i + 1) % list.length]];
+  const poster = withPoster && productId ? PRODUCT_POSTERS[productId] : undefined;
+  return poster ? [poster, list[i]] : [list[i], list[(i + 1) % list.length]];
 }

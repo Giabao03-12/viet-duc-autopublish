@@ -224,6 +224,13 @@ async function main() {
       const ids = ALL_SLOTS.map((x) => `${SLOTS[x].hour}:${SLOTS[x].minute}`);
       t("Không có 2 khung trùng giờ", new Set(ids).size === ids.length);
     }
+    {
+      const { pickPhotos, PRODUCT_POSTERS } = await import("../lib/photos");
+      const fsx = await import("fs");
+      const ok = Object.entries(PRODUCT_POSTERS).every(([id, f]) => pickPhotos(id, 7, true)?.[0] === f && fsx.existsSync(`assets/photos/${f}`));
+      t("Bài sản phẩm: ảnh đầu là poster đúng sản phẩm, file tồn tại", ok);
+      t("Bài giáo dục không dùng poster", [0, 1, 2, 3].every((n) => !pickPhotos("rich", n)?.some((f) => f.startsWith("poster-"))));
+    }
     t("Caption video có cảnh báo + hashtag do hệ thống gắn", !!a.post && a.post.caption.includes("không thay thế tư vấn y khoa") && a.post.caption.includes("#VietDucSongKhoe"));
     const dup = await prepareSlot({ slot: "1930", now: new Date(D.getTime() + 60000) });
     t("Video: chạy lại cùng khung -> chống trùng", dup.status === "duplicate");

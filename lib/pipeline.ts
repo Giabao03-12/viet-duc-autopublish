@@ -215,7 +215,7 @@ export async function prepareSlot(opts: PrepareOptions): Promise<PrepareResult> 
     const publicBase = env("PUBLIC_BASE_URL").replace(/\/$/, "");
     // Mọi bài ảnh: thẻ chữ lớn + 2 ảnh thật của sản phẩm (kiểu nhiều ảnh trên Facebook); thiếu ảnh -> bài 1 ảnh như cũ
     const dayNo = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
-    const photos = pickPhotos(kind === "product" ? pick.product?.id : productForGroup(pick.topic.group, dayNo), dayNo + SLOTS[slot].hour) ?? undefined;
+    const photos = pickPhotos(kind === "product" ? pick.product?.id : productForGroup(pick.topic.group, dayNo), dayNo + SLOTS[slot].hour, kind === "product") ?? undefined;
     const imgBase = publicBase ? `${publicBase}/api/image/${postId}.png` : undefined;
     const post: Post = {
       ...base, ...common, caption: composed.fullCaption, claimIds: composed.usedClaimIds,
